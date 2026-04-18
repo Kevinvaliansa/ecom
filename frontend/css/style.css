@@ -1,0 +1,191 @@
+:root {
+    /* Palet Warna XrivaShop - Sage Cyan (Cool Mint / Seafoam) */
+    --xriva-primary: #7cb3a1;       /* Sage dengan sentuhan cyan yang sejuk */
+    --xriva-dark: #4a7c6b;          /* Tosca/Sage gelap untuk Navbar & Tombol (kontras tinggi) */
+    --xriva-light: #e6f0ed;         /* Background sangat pudar yang adem untuk kartu */
+    --xriva-accent: #a3c9bd;        /* Warna efek transisi */
+    --xriva-text-dark: #1e4035;     /* Warna pekat khusus untuk teks agar sangat terbaca */
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+/* ================= UTILITY CLASSES (PERBAIKAN KONTRAS TEKS) ================= */
+.bg-sage-primary {
+    background-color: var(--xriva-primary) !important;
+    color: var(--xriva-text-dark) !important; /* Otomatis ubah teks jadi hijau gelap */
+}
+
+/* Trik Sihir: Memaksa text-white bawaan Bootstrap menjadi gelap jika ada di background terang */
+.bg-sage-primary.text-white,
+.bg-sage-primary .text-white {
+    color: var(--xriva-text-dark) !important;
+}
+
+/* Mengubah tombol silang (X) di pop-up modal menjadi gelap */
+.bg-sage-primary .btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(50%);
+}
+
+.bg-sage-light {
+    background-color: var(--xriva-light) !important;
+    color: var(--xriva-text-dark) !important;
+}
+
+.text-sage-dark {
+    color: var(--xriva-dark) !important;
+}
+
+/* ================= NAVBAR ================= */
+.navbar-sage {
+    background-color: var(--xriva-dark);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+.navbar-sage .navbar-brand,
+.navbar-sage .nav-link {
+    color: #ffffff !important; /* Pastikan teks navbar selalu putih terang */
+}
+.navbar-sage .nav-link.active {
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(255,255,255,0.4);
+}
+
+/* ================= BUTTONS (Dibuat lebih tegas) ================= */
+.btn-sage {
+    background-color: var(--xriva-dark) !important; /* Tombol dibuat sedikit gelap */
+    color: white !important;
+    border: none;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+.btn-sage:hover {
+    background-color: var(--xriva-text-dark) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(99, 156, 84, 0.4);
+}
+
+.btn-outline-sage {
+    color: var(--xriva-dark);
+    border: 2px solid var(--xriva-dark);
+    background-color: transparent;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+.btn-outline-sage:hover {
+    background-color: var(--xriva-dark);
+    color: white;
+}
+
+/* ================= CARDS (Efek Mengambang) ================= */
+.card {
+    border-radius: 15px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
+}
+.card-header {
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+/* ================= CHATBOT AI ================= */
+#chatbot-container {
+    position: fixed;
+    bottom: 90px;
+    right: 25px;
+    width: 340px;
+    background: white;
+    border-radius: 18px;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    display: none;
+    flex-direction: column;
+    z-index: 1000;
+    overflow: hidden;
+    border: 1px solid var(--xriva-light);
+}
+
+.chatbot-header {
+    background: var(--xriva-dark);
+    color: white;
+    padding: 15px 20px;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.chat-body {
+    height: 320px;
+    overflow-y: auto;
+    padding: 20px;
+    background-color: #fafafa;
+}
+
+.chat-input {
+    display: flex;
+    padding: 15px;
+    background: white;
+    border-top: 1px solid #eee;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    outline: none;
+    background: #f4f4f4;
+    transition: border 0.3s;
+}
+
+.chat-input input:focus {
+    border-color: var(--xriva-dark);
+    background: white;
+}
+
+.chat-input button {
+    background: var(--xriva-dark);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    margin-left: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-input button:hover {
+    background: var(--xriva-text-dark);
+    transform: scale(1.1);
+}
+
+#chatbot-toggle {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    background: var(--xriva-dark);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 65px;
+    height: 65px;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#chatbot-toggle:hover {
+    background: var(--xriva-text-dark);
+    transform: scale(1.1) rotate(10deg);
+}
