@@ -57,19 +57,54 @@ $produk_data = $produk_stmt->fetchAll();
 </head>
 <body class="bg-light">
 
-<nav class="navbar navbar-expand-lg navbar-dark navbar-sage mb-4">
-    <div class="container-fluid">
-        <span class="navbar-brand mb-0 h1 fw-bold">Dashboard Admin</span>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNav">
+<nav class="navbar navbar-expand-lg navbar-dark navbar-sage sticky-top shadow-sm py-2">
+    <div class="container">
+        <a class="navbar-brand fw-bold fs-4" href="index.php">
+            <i class="fas fa-leaf"></i> XrivaStore
+        </a>
+            
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse" id="adminNav">
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item"><a class="nav-link active fw-bold" href="produk.php">Kelola Produk</a></li>
-                <li class="nav-item"><a class="nav-link" href="transaksi.php">Kelola Transaksi</a></li>
-                <li class="nav-item"><a class="nav-link" href="laporan.php">Laporan Penjualan</a></li>
+            
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto align-items-center gap-3">
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center <?= basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active fw-bold' : '' ?>" href="index.php">
+                        Home
+                    </a>
+                </li>
+                <li class="nav-item">
+                   <a class="nav-link d-flex align-items-center <?= basename($_SERVER['PHP_SELF']) == 'wishlist.php' ? 'active fw-bold' : '' ?>" href="wishlist.php">
+                        <i class="fas fa-heart me-1"></i> Wishlist
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center <?= basename($_SERVER['PHP_SELF']) == 'cart.php' ? 'active fw-bold' : '' ?>" href="cart.php">
+                        <i class="fas fa-shopping-cart me-1"></i> Keranjang
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center <?= basename($_SERVER['PHP_SELF']) == 'history.php' ? 'active fw-bold' : '' ?>" href="history.php">
+                        <i class="fas fa-history me-1"></i> Pesanan
+                    </a>
+                </li>
+                    
+                <li class="nav-item dropdown ms-2 d-flex align-items-center border-start ps-3">
+                    <div class="rounded-circle d-flex justify-content-center align-items-center bg-white text-sage-dark fw-bold me-2 shadow-sm" style="width: 35px; height: 35px; font-size: 1rem;">
+                        <?= isset($inisial) ? $inisial : strtoupper(substr($_SESSION['user_nama'], 0, 1)) ?>
+                    </div>
+                    <a class="nav-link dropdown-toggle fw-bold text-white p-0" href="#" data-bs-toggle="dropdown">
+                        <?= htmlspecialchars($_SESSION['user_nama']) ?>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end mt-3 shadow border-0" style="border-radius: 12px;">
+                        <li><a class="dropdown-item py-2" href="profile.php"><i class="fas fa-user-circle text-muted me-2"></i> Profil Saya</a></li>
+                        <li><a class="dropdown-item py-2" href="history.php"><i class="fas fa-clipboard-list text-muted me-2"></i> Pesanan Saya</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger py-2" href="logout.php"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                    </ul>
+                </li>
             </ul>
-            <a href="../index.php" class="btn btn-outline-light btn-sm" target="_blank">Lihat Website</a>
         </div>
     </div>
 </nav>

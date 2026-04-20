@@ -23,6 +23,12 @@ if (isset($_GET['add_wishlist'])) {
 // Ambil 4 produk terbaru dari database (Default awal)
 $stmt = $conn->query("SELECT * FROM produk ORDER BY id DESC LIMIT 4");
 $produk_list = $stmt->fetchAll();
+
+// Siapkan Inisial untuk Avatar Navbar
+$inisial = '';
+if (isset($_SESSION['user_nama'])) {
+    $inisial = strtoupper(substr($_SESSION['user_nama'], 0, 1));
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -58,12 +64,19 @@ $produk_list = $stmt->fetchAll();
                         <li class="nav-item"><a class="nav-link" href="wishlist.php"><i class="fas fa-heart"></i> Wishlist</a></li>
                         <li class="nav-item"><a class="nav-link" href="cart.php"><i class="fas fa-shopping-cart"></i> Keranjang</a></li>
                         <li class="nav-item"><a class="nav-link" href="history.php"><i class="fas fa-history"></i> Pesanan</a></li>
-                        <li class="nav-item dropdown ms-2">
-                            <a class="nav-link dropdown-toggle fw-bold text-white" href="#" data-bs-toggle="dropdown">
-                                Halo, <?= htmlspecialchars($_SESSION['user_nama']) ?>
+                        
+                        <li class="nav-item dropdown ms-3 d-flex align-items-center">
+                            <div class="rounded-circle d-flex justify-content-center align-items-center bg-white text-sage-dark fw-bold me-2" style="width: 32px; height: 32px; font-size: 0.9rem;">
+                                <?= $inisial ?>
+                            </div>
+                            <a class="nav-link dropdown-toggle fw-bold text-white p-0" href="#" data-bs-toggle="dropdown">
+                                <?= htmlspecialchars($_SESSION['user_nama']) ?>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item text-danger" href="logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                            <ul class="dropdown-menu dropdown-menu-end mt-3 shadow-sm border-0">
+                                <li><a class="dropdown-item py-2" href="profile.php"><i class="fas fa-user-circle text-muted me-2"></i> Profil Saya</a></li>
+                                <li><a class="dropdown-item py-2" href="history.php"><i class="fas fa-clipboard-list text-muted me-2"></i> Riwayat Belanja</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger py-2" href="logout.php"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
                             </ul>
                         </li>
                     <?php else: ?>
@@ -75,45 +88,63 @@ $produk_list = $stmt->fetchAll();
         </div>
     </nav>
 
-    <header class="bg-sage-light py-5 text-center">
-        <div class="container">
-            <h1 class="fw-bold text-sage-dark">Koleksi Terbaru Telah Tiba</h1>
-            <p class="lead text-secondary">Belanja lebih mudah dengan panduan Asisten AI kami.</p>
-            <a href="#produk-terbaru" class="btn btn-sage btn-lg mt-3 shadow-sm">Mulai Belanja</a>
+    <header class="py-5 mb-5" style="background: linear-gradient(135deg, #f8f9fa 0%, #cad2c5 100%); border-bottom: 1px solid #dee2e6;">
+        <div class="container py-4 text-center">
+            <h1 class="fw-bold text-sage-dark mb-3" style="letter-spacing: -0.5px;">Koleksi Terbaru Telah Tiba</h1>
+            <p class="lead text-secondary mb-4" style="max-width: 600px; margin: 0 auto;">Penuhi kebutuhan harianmu dengan mudah, aman, dan dapatkan panduan cerdas dari Asisten AI kami.</p>
+            <a href="#produk-terbaru" class="btn btn-sage btn-lg px-5 fw-bold shadow-sm rounded-pill">Mulai Belanja</a>
         </div>
     </header>
 
-    <section id="produk-terbaru" class="container my-5">
-        <h3 class="text-center mb-4 text-sage-dark fw-bold">Katalog Produk</h3>
+    <section id="produk-terbaru" class="container my-5 pb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="text-sage-dark fw-bold m-0">Katalog Produk</h3>
+            <a href="#" class="text-decoration-none text-sage-dark fw-bold small">Lihat Semua <i class="fas fa-arrow-right"></i></a>
+        </div>
         
         <div class="row" id="daftar-produk">
             <?php if(count($produk_list) > 0): ?>
                 <?php foreach($produk_list as $p): ?>
-                <div class="col-md-3 mb-4">
-                    <div class="card h-100 shadow-sm border-0 position-relative">
-                        <img src="frontend/images/produk/<?= htmlspecialchars($p['gambar']) ?>" class="card-img-top" style="height: 200px; object-fit: cover;">
-                        <div class="card-body text-center d-flex flex-column">
-                            <h6 class="card-title fw-bold text-truncate"><?= htmlspecialchars($p['nama_produk']) ?></h6>
-                            <p class="card-text text-sage-dark fw-bold mb-1">Rp <?= number_format($p['harga'], 0, ',', '.') ?></p>
+                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                    <div class="card h-100 shadow-sm border-0 position-relative bg-white">
+                        
+                        <a href="index.php?add_wishlist=<?= $p['id'] ?>" class="btn btn-light text-danger position-absolute rounded-circle shadow-sm" style="top: 10px; right: 10px; width: 35px; height: 35px; padding: 5px; z-index: 2;" title="Simpan ke Wishlist">
+                            <i class="far fa-heart mt-1"></i>
+                        </a>
+
+                        <div style="overflow: hidden; border-top-left-radius: 16px; border-top-right-radius: 16px;">
+                            <a href="detail.php?id=<?= $p['id'] ?>">
+                                <img src="frontend/images/produk/<?= htmlspecialchars($p['gambar']) ?>" class="card-img-top" style="height: 220px; object-fit: cover;">
+                            </a>
+                        </div>
+
+                        <div class="card-body d-flex flex-column p-4">
+                            <h6 class="card-title fw-bold text-dark text-truncate mb-1"><?= htmlspecialchars($p['nama_produk']) ?></h6>
+                            <h5 class="card-text text-sage-dark fw-bold mb-2">Rp <?= number_format($p['harga'], 0, ',', '.') ?></h5>
                             
                             <?php if($p['stok'] > 0): ?>
-                                <small class="text-muted mb-3">Tersisa: <?= $p['stok'] ?> Pcs</small>
+                                <small class="text-muted mb-4"><i class="fas fa-box-open me-1"></i> Sisa <?= $p['stok'] ?> Pcs</small>
                             <?php else: ?>
-                                <small class="text-danger fw-bold mb-3">Stok Habis</small>
+                                <small class="text-danger fw-bold mb-4"><i class="fas fa-times-circle me-1"></i> Stok Habis</small>
                             <?php endif; ?>
                             
-                            <div class="d-flex justify-content-between mt-auto gap-2">
+                            <div class="mt-auto">
                                 <form action="cart.php" method="POST" class="w-100">
                                     <input type="hidden" name="id_produk" value="<?= $p['id'] ?>">
-                                    <input type="hidden" name="qty" value="1">
-                                    <button type="submit" name="add_to_cart" class="btn btn-sage btn-sm w-100" <?= ($p['stok'] <= 0) ? 'disabled' : '' ?>>
-                                        <i class="fas fa-cart-plus"></i> Tambah
-                                    </button>
+                                    
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-4">
+                                            <input type="number" name="qty" class="form-control text-center fw-bold" value="1" min="1" max="<?= $p['stok'] ?>" <?= ($p['stok'] <= 0) ? 'disabled' : '' ?>>
+                                        </div>
+                                        <div class="col-8">
+                                            <button type="submit" name="add_to_cart" class="btn btn-sage w-100 fw-bold" <?= ($p['stok'] <= 0) ? 'disabled' : '' ?>>
+                                                + Keranjang
+                                            </button>
+                                        </div>
+                                    </div>
                                 </form>
-                                <a href="index.php?add_wishlist=<?= $p['id'] ?>" class="btn btn-outline-danger btn-sm flex-shrink-0" title="Simpan ke Wishlist">
-                                    <i class="far fa-heart"></i>
-                                </a>
                             </div>
+
                         </div>
                     </div>
                 </div>
@@ -151,25 +182,16 @@ $produk_list = $stmt->fetchAll();
     <button id="chatbot-toggle" class="btn-sage shadow"><i class="fas fa-comments fa-2x"></i></button>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
     <script>
-        // --- 1. SCRIPT LIVE SEARCH PRODUCT ---
         const searchInput = document.getElementById('live-search');
         const daftarProduk = document.getElementById('daftar-produk');
-
         searchInput.addEventListener('input', function() {
             const keyword = searchInput.value;
-            
-            // Lakukan Fetch ke file pencari di backend
             fetch('backend/search_produk.php?keyword=' + keyword)
             .then(response => response.text())
-            .then(data => {
-                // Ganti isi daftar produk secara otomatis (tanpa refresh web)
-                daftarProduk.innerHTML = data;
-            });
+            .then(data => { daftarProduk.innerHTML = data; });
         });
 
-        // --- 2. SCRIPT AI CHATBOT (Sama seperti sebelumnya) ---
         const chatContainer = document.getElementById('chatbot-container');
         const btnToggle = document.getElementById('chatbot-toggle');
         const btnClose = document.getElementById('chatbot-close');
@@ -199,9 +221,8 @@ $produk_list = $stmt->fetchAll();
         function sendMessage() {
             const pesanUser = chatInput.value.trim();
             if (pesanUser === "") return;
-
             chatBody.innerHTML += `<div style="text-align: right; margin-bottom: 10px;">
-                                      <span style="background-color: var(--sage-primary); color: white; padding: 8px 12px; border-radius: 10px; display: inline-block; max-width: 80%; font-size: 0.9em;">${pesanUser}</span>
+                                      <span style="background-color: var(--xriva-primary); color: var(--xriva-text-dark); padding: 8px 12px; border-radius: 10px; display: inline-block; max-width: 80%; font-size: 0.9em; font-weight: bold;">${pesanUser}</span>
                                    </div>`;
             chatInput.value = ''; chatBody.scrollTop = chatBody.scrollHeight;
 
@@ -220,7 +241,7 @@ $produk_list = $stmt->fetchAll();
             .then(data => {
                 document.getElementById('loading').remove();
                 chatBody.innerHTML += `<div style="text-align: left; margin-bottom: 10px;">
-                                          <span id="${tempId}" style="background-color: var(--sage-light); color: var(--sage-dark); padding: 8px 12px; border-radius: 10px; display: inline-block; max-width: 80%; font-size: 0.9em;"></span>
+                                          <span id="${tempId}" style="background-color: var(--xriva-light); color: var(--xriva-text-dark); padding: 8px 12px; border-radius: 10px; display: inline-block; max-width: 80%; font-size: 0.9em;"></span>
                                        </div>`;
                 typeWriter(data.reply, tempId);
             });
