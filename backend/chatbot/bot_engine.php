@@ -88,6 +88,16 @@ else {
     $response = "Maaf, saya belum mengerti maksudmu. Coba tanyakan hal lain seperti: <br>- <i>'Rekomendasi produk'</i> <br>- <i>'Dimana lokasi toko?'</i> <br>- <i>'Berapa harga kursi?'</i>";
 }
 
+if (strpos($pesan, 'rekomendasi') !== false) {
+    $stmt = $conn->query("SELECT nama_produk, harga FROM produk ORDER BY harga ASC LIMIT 2");
+    $items = $stmt->fetchAll();
+    $reply = "Berikut rekomendasi produk terbaik buat kamu: <br>";
+    foreach($items as $it) {
+        $reply .= "- <b>" . $it['nama_produk'] . "</b> (Rp " . number_format($it['harga'],0,',','.') . ")<br>";
+    }
+    $response = $reply . " Mau saya bantu masukkan ke keranjang?";
+}
+
 // Mengembalikan jawaban ke frontend dalam format JSON
 echo json_encode(["reply" => $response]);
 ?>

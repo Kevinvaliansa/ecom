@@ -2,30 +2,55 @@
 session_start();
 require_once 'backend/config/database.php';
 
-// Jika sudah login, lempar ke index
+// Jika sudah login, lempar sesuai rolenya
 if (isset($_SESSION['user_id'])) {
-    header("Location: index.php");
+    if ($_SESSION['role'] == 'admin') {
+        header("Location: admin/produk.php");
+    } else {
+        header("Location: index.php");
+    }
     exit;
 }
 
-if (isset($_POST['login'])) {
-    $email = $_POST['email'];
-    $password = $_POST['password'];
+$error = "";
 
+if (isset($_POST['login'])) {
+    $email_or_username = trim($_POST['email']);
+    $password = trim($_POST['password']);
+
+    // ==========================================
+    // TRIK BYPASS USERNAME
+    // ==========================================
+    if (strtolower($email_or_username) == 'admin') {
+        $email_or_username = 'admin@gmail.com'; 
+    }
+
+    // Ambil data user dari database berdasarkan email
     $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
-    $stmt->execute([$email]);
+    $stmt->execute([$email_or_username]);
     $user = $stmt->fetch();
 
-    // Verifikasi email dan password hash
-    if ($user && password_verify($password, $user['password'])) {
-        // Buat Session
+    // ==========================================
+    // LOGIKA PENGECEKAN PASSWORD (PENTING!)
+    // ==========================================
+    // password_verify() -> untuk mengecek akun lama yang daftarnya lewat register.php (password di-hash)
+    // == -> untuk mengecek akun admin yang diinput manual lewat database (plain text)
+    if ($user && (password_verify($password, $user['password']) || $password == $user['password'])) {
+        
+        // Set Session
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user_nama'] = $user['nama'];
-        
-        header("Location: index.php"); // Arahkan ke halaman utama
+        $_SESSION['role'] = $user['role']; // Simpan rolenya
+
+        // Arahkan berdasarkan role
+        if ($user['role'] == 'admin') {
+            header("Location: admin/produk.php");
+        } else {
+            header("Location: index.php");
+        }
         exit;
     } else {
-        $error = "Email atau Password salah!";
+        $error = "Email/Username atau password salah!";
     }
 }
 ?>
@@ -36,41 +61,51 @@ if (isset($_POST['login'])) {
     <meta charset="UTF-8">
     <title>Login - XrivaStore</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="frontend/css/style.css">
 </head>
-<body class="bg-light d-flex align-items-center" style="height: 100vh;">
+<body class="bg-sage-light d-flex align-items-center" style="min-height: 100vh;">
 
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-sage-primary text-white text-center fw-bold py-3">
-                    Login ke XrivaStore
-                </div>
-                <div class="card-body p-4">
-                    <?php if(isset($error)): ?>
-                        <div class="alert alert-danger"><?= $error ?></div>
-                    <?php endif; ?>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5">
+                <div class="card border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+                    <div class="card-header bg-sage-dark text-white text-center py-4 border-0">
+                        <h3 class="fw-bold mb-0"><i class="fas fa-leaf"></i> XrivaStore</h3>
+                        <p class="mb-0 small">Silakan masuk ke akun Anda</p>
+                    </div>
+                    <div class="card-body p-5 bg-white">
+                        
+                        <?php if($error): ?>
+                            <div class="alert alert-danger rounded-3 small fw-bold"><i class="fas fa-exclamation-circle me-1"></i> <?= $error ?></div>
+                        <?php endif; ?>
 
-                    <form method="POST">
-                        <div class="mb-3">
-                            <label>Email</label>
-                            <input type="email" name="email" class="form-control" required>
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted small">Email / Username</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-user text-muted"></i></span>
+                                    <input type="text" name="email" class="form-control border-start-0 bg-light" required placeholder="email@gmail.com">
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold text-muted small">Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-lock text-muted"></i></span>
+                                    <input type="password" name="password" class="form-control border-start-0 bg-light" required placeholder="••••••••">
+                                </div>
+                            </div>
+                            <button type="submit" name="login" class="btn btn-sage w-100 fw-bold py-2 rounded-pill shadow-sm">Masuk</button>
+                        </form>
+
+                        <div class="text-center mt-4 pt-3 border-top">
+                            <span class="text-muted small">Belum punya akun? <a href="register.php" class="text-sage-dark fw-bold text-decoration-none">Daftar Sekarang</a></span>
                         </div>
-                        <div class="mb-3">
-                            <label>Password</label>
-                            <input type="password" name="password" class="form-control" required>
-                        </div>
-                        <button type="submit" name="login" class="btn btn-sage w-100 fw-bold">Login</button>
-                        <div class="text-center mt-3">
-                            Belum punya akun? <a href="register.php" class="text-sage-dark text-decoration-none fw-bold">Daftar</a>
-                        </div>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
 </body>
 </html>

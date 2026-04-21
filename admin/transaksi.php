@@ -1,142 +1,159 @@
 <?php
+session_start();
 require_once '../backend/config/database.php';
 
-// PROSES UPDATE STATUS PESANAN
-if (isset($_POST['update_status'])) {
-    $id_transaksi = $_POST['id_transaksi'];
-    $status_baru = $_POST['status_pesanan'];
-    
-    $update_stmt = $conn->prepare("UPDATE transaksi SET status_pesanan = ? WHERE id = ?");
-    if ($update_stmt->execute([$status_baru, $id_transaksi])) {
-        $pesan_sukses = "Status pesanan #$id_transaksi berhasil diperbarui menjadi '$status_baru'!";
-    } else {
-        $pesan_error = "Gagal memperbarui status pesanan.";
-    }
+// CEK LOGIN DAN ROLE ADMIN
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
+    echo "<script>alert('Akses Ditolak! Anda bukan Admin.'); window.location.href='../login.php';</script>";
+    exit;
 }
 
-// AMBIL SEMUA DATA TRANSAKSI BESERTA NAMA USER
-$stmt = $conn->query("SELECT t.*, u.nama as nama_pembeli 
-                      FROM transaksi t 
-                      JOIN users u ON t.id_user = u.id 
-                      ORDER BY t.tanggal_transaksi DESC");
-$transaksi_data = $stmt->fetchAll();
+// LOGIKA UPDATE STATUS PESANAN
+if (isset($_GET['id']) && isset($_GET['status'])) {
+    $id_transaksi = $_GET['id'];
+    $status_baru = $_GET['status'];
+    
+    $update = $conn->prepare("UPDATE transaksi SET status_pesanan = ? WHERE id = ?");
+    $update->execute([$status_baru, $id_transaksi]);
+    
+    header("Location: transaksi.php");
+    exit;
+}
+
+// AMBIL DATA TRANSAKSI BESERTA NAMA PEMBELI
+$stmt = $conn->query("
+    SELECT t.*, u.nama 
+    FROM transaksi t 
+    JOIN users u ON t.id_user = u.id 
+    ORDER BY t.tanggal_transaksi DESC
+");
+$transaksi_list = $stmt->fetchAll();
 ?>
 
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Kelola Transaksi</title>
+    <title>Kelola Pesanan - Admin XrivaStore</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="../frontend/css/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-bootstrap-4/bootstrap-4.css" rel="stylesheet">
+    <style>
+        :root { --xriva-dark: #4a7c6b; --xriva-primary: #7cb3a1; }
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
+        .sidebar { min-height: 100vh; background-color: var(--xriva-dark); color: white; border-top-right-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 4px 0 15px rgba(0,0,0,0.1); }
+        .sidebar .nav-link { color: rgba(255,255,255,0.8); margin-bottom: 10px; border-radius: 10px; padding: 12px 20px; transition: 0.3s; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { background-color: rgba(255,255,255,0.15); color: white; font-weight: bold; }
+        .content-area { padding: 30px; }
+        .card { border-radius: 16px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .table th { background-color: #f8f9fa; color: #555; font-weight: 600; border-bottom: 2px solid #eee; }
+        .table td { vertical-align: middle; border-bottom: 1px solid #eee; }
+        .btn-sage { background-color: var(--xriva-primary); color: white; border: none; }
+        .btn-sage:hover { background-color: var(--xriva-dark); color: white; }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
-<nav class="navbar navbar-expand-lg navbar-dark navbar-sage mb-4">
-    <div class="container-fluid">
-        <span class="navbar-brand mb-0 h1 fw-bold">Dashboard Admin</span>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="adminNav">
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item"><a class="nav-link" href="produk.php">Kelola Produk</a></li>
-                <li class="nav-item"><a class="nav-link active fw-bold" href="transaksi.php">Kelola Transaksi</a></li>
-                <li class="nav-item"><a class="nav-link" href="laporan.php">Laporan Penjualan</a></li>
-            </ul>
-            <a href="../index.php" class="btn btn-outline-light btn-sm" target="_blank">Lihat Website</a>
-        </div>
+<div class="d-flex">
+    <div class="sidebar p-4" style="width: 280px;">
+        <h4 class="fw-bold mb-5 text-center"><i class="fas fa-leaf"></i> AdminPanel</h4>
+        <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link" href="produk.php"><i class="fas fa-box me-3"></i> Kelola Produk</a></li>
+            <li class="nav-item"><a class="nav-link active" href="transaksi.php"><i class="fas fa-shopping-cart me-3"></i> Pesanan Masuk</a></li>
+            <li class="nav-item"><a class="nav-link" href="laporan.php"><i class="fas fa-chart-line me-3"></i> Laporan Penjualan</a></li>
+            <li class="nav-item mt-5"><a class="nav-link text-danger" href="../logout.php"><i class="fas fa-sign-out-alt me-3"></i> Keluar</a></li>
+            <li class="nav-item"><a class="nav-link text-info" href="../index.php" target="_blank"><i class="fas fa-external-link-alt me-3"></i> Lihat Website</a></li>
+        </ul>
     </div>
-</nav>
 
-<div class="container-fluid px-4">
-    <h3 class="text-sage-dark fw-bold mb-3"><i class="fas fa-clipboard-list"></i> Kelola Transaksi Pesanan</h3>
-
-    <?php if(isset($pesan_sukses)): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <?= $pesan_sukses ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <div class="content-area flex-grow-1">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold text-dark m-0">Pesanan Masuk</h2>
+            <span class="text-muted"><i class="fas fa-user-circle"></i> Halo, <?= htmlspecialchars($_SESSION['user_nama']) ?></span>
         </div>
-    <?php endif; ?>
 
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-sage-light text-sage-dark fw-bold">
-            Daftar Pesanan Masuk
-        </div>
-        <div class="card-body table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>ID / Tanggal</th>
-                        <th>Nama Pembeli</th>
-                        <th>Total Harga</th>
-                        <th>Metode</th>
-                        <th>Status</th>
-                        <th>Bukti Bayar</th>
-                        <th>Aksi / Update Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if(count($transaksi_data) > 0): ?>
-                        <?php foreach($transaksi_data as $t): ?>
+        <div class="card bg-white p-4">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
                         <tr>
+                            <th>ID</th>
+                            <th>Tanggal</th>
+                            <th>Pembeli</th>
+                            <th>Total Tagihan</th>
+                            <th>Metode</th>
+                            <th>Status</th>
+                            <th>Aksi Admin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach($transaksi_list as $t): ?>
+                        <tr>
+                            <td class="fw-bold text-muted">#<?= $t['id'] ?></td>
+                            <td><?= date('d M Y, H:i', strtotime($t['tanggal_transaksi'])) ?></td>
+                            <td class="fw-bold"><?= htmlspecialchars($t['nama']) ?></td>
+                            <td class="text-success fw-bold">Rp <?= number_format($t['total_harga'], 0, ',', '.') ?></td>
                             <td>
-                                <b>#<?= $t['id'] ?></b><br>
-                                <small class="text-muted"><?= date('d M Y, H:i', strtotime($t['tanggal_transaksi'])) ?></small>
-                            </td>
-                            <td><?= htmlspecialchars($t['nama_pembeli']) ?></td>
-                            <td class="fw-bold">Rp <?= number_format($t['total_harga'], 0, ',', '.') ?></td>
-                            <td>
-                                <?php if($t['metode_pembayaran'] == 'COD'): ?>
-                                    <span class="badge bg-secondary">COD</span>
+                                <?php if($t['metode_pembayaran'] == 'Midtrans'): ?>
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary"><i class="fas fa-credit-card"></i> Midtrans</span>
                                 <?php else: ?>
-                                    <span class="badge bg-info text-dark">Transfer</span>
+                                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning"><i class="fas fa-truck"></i> COD</span>
                                 <?php endif; ?>
                             </td>
                             <td>
                                 <?php 
-                                    if($t['status_pesanan'] == 'diproses') echo '<span class="badge bg-warning text-dark">Diproses</span>';
-                                    elseif($t['status_pesanan'] == 'dikirim') echo '<span class="badge bg-primary">Dikirim</span>';
-                                    else echo '<span class="badge bg-success">Selesai</span>';
+                                    if ($t['status_pesanan'] == 'pending') echo '<span class="badge bg-warning text-dark px-2 py-1 rounded-pill">Pending</span>';
+                                    elseif ($t['status_pesanan'] == 'diproses') echo '<span class="badge bg-info text-dark px-2 py-1 rounded-pill">Diproses</span>';
+                                    elseif ($t['status_pesanan'] == 'dikirim') echo '<span class="badge bg-primary px-2 py-1 rounded-pill">Dikirim</span>';
+                                    elseif ($t['status_pesanan'] == 'selesai') echo '<span class="badge bg-success px-2 py-1 rounded-pill">Selesai</span>';
+                                    else echo '<span class="badge bg-danger px-2 py-1 rounded-pill">Batal</span>';
                                 ?>
                             </td>
                             <td>
-                                <?php if($t['metode_pembayaran'] == 'Transfer'): ?>
-                                    <?php if(!empty($t['bukti_bayar'])): ?>
-                                        <a href="../frontend/images/bukti/<?= htmlspecialchars($t['bukti_bayar']) ?>" target="_blank" class="btn btn-sm btn-outline-info">Lihat Bukti</a>
-                                    <?php else: ?>
-                                        <small class="text-danger">Belum Upload</small>
-                                    <?php endif; ?>
+                                <?php if ($t['status_pesanan'] == 'pending'): ?>
+                                    <button onclick="updateStatus(<?= $t['id'] ?>, 'diproses', 'Konfirmasi Pembayaran?', 'Pesanan akan ditandai lunas dan mulai diproses.')" class="btn btn-sm btn-success rounded-pill px-3 shadow-sm"><i class="fas fa-check-circle"></i> Tandai Lunas</button>
+                                <?php elseif ($t['status_pesanan'] == 'diproses'): ?>
+                                    <button onclick="updateStatus(<?= $t['id'] ?>, 'dikirim', 'Kirim Pesanan?', 'Pesanan akan ditandai sedang dalam pengiriman.')" class="btn btn-sm btn-info text-white rounded-pill px-3 shadow-sm"><i class="fas fa-paper-plane"></i> Kirim</button>
+                                <?php elseif ($t['status_pesanan'] == 'dikirim'): ?>
+                                    <button onclick="updateStatus(<?= $t['id'] ?>, 'selesai', 'Pesanan Selesai?', 'Tandai pesanan ini telah diterima oleh pembeli.')" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm"><i class="fas fa-flag-checkered"></i> Selesai</button>
                                 <?php else: ?>
-                                    <small class="text-muted">-</small>
+                                    <span class="text-muted small"><i class="fas fa-lock"></i> Tidak ada aksi</span>
                                 <?php endif; ?>
-                            </td>
-                            <td>
-                                <form method="POST" action="" class="d-flex align-items-center">
-                                    <input type="hidden" name="id_transaksi" value="<?= $t['id'] ?>">
-                                    <select name="status_pesanan" class="form-select form-select-sm me-2" style="width: 130px;">
-                                        <option value="diproses" <?= ($t['status_pesanan'] == 'diproses') ? 'selected' : '' ?>>Diproses</option>
-                                        <option value="dikirim" <?= ($t['status_pesanan'] == 'dikirim') ? 'selected' : '' ?>>Dikirim</option>
-                                        <option value="selesai" <?= ($t['status_pesanan'] == 'selesai') ? 'selected' : '' ?>>Selesai</option>
-                                    </select>
-                                    <button type="submit" name="update_status" class="btn btn-sm btn-sage"><i class="fas fa-save"></i></button>
-                                </form>
                             </td>
                         </tr>
                         <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="7" class="text-center text-muted py-4">Belum ada transaksi masuk.</td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                        
+                        <?php if(count($transaksi_list) == 0): ?>
+                        <tr><td colspan="7" class="text-center py-4 text-muted">Belum ada pesanan masuk.</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+function updateStatus(id, statusBaru, judul, deskripsi) {
+    Swal.fire({
+        title: judul,
+        text: deskripsi,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#7cb3a1',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Ya, Lanjutkan!',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = "transaksi.php?id=" + id + "&status=" + statusBaru;
+        }
+    })
+}
+</script>
+
 </body>
 </html>

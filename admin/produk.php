@@ -1,221 +1,154 @@
 <?php
+session_start();
 require_once '../backend/config/database.php';
 
-// PROSES TAMBAH PRODUK
-if (isset($_POST['tambah'])) {
+// CEK LOGIN DAN ROLE ADMIN
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
+    echo "<script>alert('Akses Ditolak! Anda bukan Admin.'); window.location.href='../login.php';</script>";
+    exit;
+}
+
+// Logika Tambah Produk
+if (isset($_POST['tambah_produk'])) {
     $nama = $_POST['nama_produk'];
-    $kategori = $_POST['id_kategori'];
     $harga = $_POST['harga'];
     $stok = $_POST['stok'];
     $deskripsi = $_POST['deskripsi'];
     
-    $gambar = $_FILES['gambar']['name'];
-    $tmp = $_FILES['gambar']['tmp_name'];
-    $path = "../frontend/images/produk/" . $gambar;
-    
-    if (move_uploaded_file($tmp, $path)) {
-        $stmt = $conn->prepare("INSERT INTO produk (id_kategori, nama_produk, harga, stok, deskripsi, gambar) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$kategori, $nama, $harga, $stok, $deskripsi, $gambar]);
-        $pesan_sukses = "Produk berhasil ditambahkan!";
-    } else {
-        $pesan_error = "Gagal upload gambar!";
-    }
+    $insert = $conn->prepare("INSERT INTO produk (nama_produk, harga, stok, deskripsi, gambar) VALUES (?, ?, ?, ?, 'default.png')");
+    $insert->execute([$nama, $harga, $stok, $deskripsi]);
+    header("Location: produk.php");
+    exit;
 }
 
-// PROSES EDIT PRODUK (Stok & Harga)
-if (isset($_POST['edit_produk'])) {
-    $id_produk = $_POST['id_produk'];
-    $harga_baru = $_POST['harga'];
-    $stok_baru = $_POST['stok'];
-    
-    $update = $conn->prepare("UPDATE produk SET harga = ?, stok = ? WHERE id = ?");
-    if ($update->execute([$harga_baru, $stok_baru, $id_produk])) {
-        $pesan_sukses = "Data produk berhasil diperbarui!";
-    } else {
-        $pesan_error = "Gagal memperbarui data produk.";
-    }
+// Logika Hapus Produk
+if (isset($_GET['hapus'])) {
+    $id_hapus = $_GET['hapus'];
+    $conn->prepare("DELETE FROM produk WHERE id = ?")->execute([$id_hapus]);
+    header("Location: produk.php");
+    exit;
 }
 
-// AMBIL DATA KATEGORI UNTUK DROPDOWN
-$kategori_stmt = $conn->query("SELECT * FROM kategori");
-$kategori_data = $kategori_stmt->fetchAll();
-
-// AMBIL DATA PRODUK UNTUK TABEL
-$produk_stmt = $conn->query("SELECT p.*, k.nama_kategori FROM produk p JOIN kategori k ON p.id_kategori = k.id ORDER BY p.id DESC");
-$produk_data = $produk_stmt->fetchAll();
+// Ambil Data
+$stmt = $conn->query("SELECT * FROM produk ORDER BY id DESC");
+$produk_list = $stmt->fetchAll();
 ?>
 
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Kelola Produk</title>
+    <title>Kelola Produk - Admin XrivaStore</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="../frontend/css/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-bootstrap-4/bootstrap-4.css" rel="stylesheet">
+    <style>
+        :root { --xriva-dark: #4a7c6b; --xriva-primary: #7cb3a1; }
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
+        .sidebar { min-height: 100vh; background-color: var(--xriva-dark); color: white; border-top-right-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 4px 0 15px rgba(0,0,0,0.1); }
+        .sidebar .nav-link { color: rgba(255,255,255,0.8); margin-bottom: 10px; border-radius: 10px; padding: 12px 20px; transition: 0.3s; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { background-color: rgba(255,255,255,0.15); color: white; font-weight: bold; }
+        .content-area { padding: 30px; }
+        .card { border-radius: 16px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .table th { background-color: #f8f9fa; color: #555; font-weight: 600; border-bottom: 2px solid #eee; }
+        .table td { vertical-align: middle; border-bottom: 1px solid #eee; }
+        .btn-sage { background-color: var(--xriva-primary); color: white; border: none; }
+        .btn-sage:hover { background-color: var(--xriva-dark); color: white; }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
-<nav class="navbar navbar-expand-lg navbar-dark navbar-sage sticky-top shadow-sm py-2">
-    <div class="container">
-        <a class="navbar-brand fw-bold fs-4" href="index.php">
-            <i class="fas fa-leaf"></i> XrivaStore
-        </a>
-            
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-            
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto align-items-center gap-3">
-                <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center <?= basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active fw-bold' : '' ?>" href="index.php">
-                        Home
-                    </a>
-                </li>
-                <li class="nav-item">
-                   <a class="nav-link d-flex align-items-center <?= basename($_SERVER['PHP_SELF']) == 'wishlist.php' ? 'active fw-bold' : '' ?>" href="wishlist.php">
-                        <i class="fas fa-heart me-1"></i> Wishlist
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center <?= basename($_SERVER['PHP_SELF']) == 'cart.php' ? 'active fw-bold' : '' ?>" href="cart.php">
-                        <i class="fas fa-shopping-cart me-1"></i> Keranjang
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center <?= basename($_SERVER['PHP_SELF']) == 'history.php' ? 'active fw-bold' : '' ?>" href="history.php">
-                        <i class="fas fa-history me-1"></i> Pesanan
-                    </a>
-                </li>
-                    
-                <li class="nav-item dropdown ms-2 d-flex align-items-center border-start ps-3">
-                    <div class="rounded-circle d-flex justify-content-center align-items-center bg-white text-sage-dark fw-bold me-2 shadow-sm" style="width: 35px; height: 35px; font-size: 1rem;">
-                        <?= isset($inisial) ? $inisial : strtoupper(substr($_SESSION['user_nama'], 0, 1)) ?>
-                    </div>
-                    <a class="nav-link dropdown-toggle fw-bold text-white p-0" href="#" data-bs-toggle="dropdown">
-                        <?= htmlspecialchars($_SESSION['user_nama']) ?>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end mt-3 shadow border-0" style="border-radius: 12px;">
-                        <li><a class="dropdown-item py-2" href="profile.php"><i class="fas fa-user-circle text-muted me-2"></i> Profil Saya</a></li>
-                        <li><a class="dropdown-item py-2" href="history.php"><i class="fas fa-clipboard-list text-muted me-2"></i> Pesanan Saya</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger py-2" href="logout.php"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
+<div class="d-flex">
+    <div class="sidebar p-4" style="width: 280px;">
+        <h4 class="fw-bold mb-5 text-center"><i class="fas fa-leaf"></i> AdminPanel</h4>
+        <ul class="nav flex-column">
+            <li class="nav-item"><a class="nav-link active" href="produk.php"><i class="fas fa-box me-3"></i> Kelola Produk</a></li>
+            <li class="nav-item"><a class="nav-link" href="transaksi.php"><i class="fas fa-shopping-cart me-3"></i> Pesanan Masuk</a></li>
+            <li class="nav-item"><a class="nav-link" href="laporan.php"><i class="fas fa-chart-line me-3"></i> Laporan Penjualan</a></li>
+            <li class="nav-item mt-5"><a class="nav-link text-danger" href="../logout.php"><i class="fas fa-sign-out-alt me-3"></i> Keluar</a></li>
+            <li class="nav-item"><a class="nav-link text-info" href="../index.php" target="_blank"><i class="fas fa-external-link-alt me-3"></i> Lihat Website</a></li>
+        </ul>
     </div>
-</nav>
 
-<div class="container-fluid px-4">
-    
-    <?php if(isset($pesan_sukses)): ?>
-        <div class="alert alert-success alert-dismissible fade show"><?= $pesan_sukses ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-    <?php endif; ?>
-    <?php if(isset($pesan_error)): ?>
-        <div class="alert alert-danger alert-dismissible fade show"><?= $pesan_error ?><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
-    <?php endif; ?>
-
-    <div class="row">
-        <div class="col-md-3 mb-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-sage-light text-sage-dark fw-bold">Tambah Produk Baru</div>
-                <div class="card-body">
-                    <form method="POST" enctype="multipart/form-data">
-                        <div class="mb-2"><label class="form-label">Nama</label><input type="text" name="nama_produk" class="form-control form-control-sm" required></div>
-                        <div class="mb-2"><label class="form-label">Kategori</label>
-                            <select name="id_kategori" class="form-control form-control-sm" required>
-                                <option value="">Pilih Kategori...</option>
-                                <?php foreach($kategori_data as $k): ?><option value="<?= $k['id'] ?>"><?= $k['nama_kategori'] ?></option><?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="mb-2"><label class="form-label">Harga (Rp)</label><input type="number" name="harga" class="form-control form-control-sm" required></div>
-                        <div class="mb-2"><label class="form-label">Stok</label><input type="number" name="stok" class="form-control form-control-sm" required></div>
-                        <div class="mb-2"><label class="form-label">Deskripsi</label><textarea name="deskripsi" class="form-control form-control-sm" rows="2" required></textarea></div>
-                        <div class="mb-3"><label class="form-label">Gambar</label><input type="file" name="gambar" class="form-control form-control-sm" accept="image/*" required></div>
-                        <button type="submit" name="tambah" class="btn btn-sage btn-sm w-100 fw-bold">Simpan Produk</button>
-                    </form>
-                </div>
+    <div class="content-area flex-grow-1">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold text-dark m-0">Katalog Produk</h2>
+            
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-muted"><i class="fas fa-user-circle"></i> Halo, <?= htmlspecialchars($_SESSION['user_nama']) ?></span>
+                <a href="tambah_produk.php" class="btn btn-sage rounded-pill px-4 shadow-sm d-flex align-items-center">
+                    <i class="fas fa-plus me-1"></i> Tambah Produk Baru
+                </a>
             </div>
         </div>
 
-        <div class="col-md-9">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-sage-light text-sage-dark fw-bold">Daftar Produk di Database</div>
-                <div class="card-body table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Gambar</th>
-                                <th>Nama Produk</th>
-                                <th>Kategori</th>
-                                <th>Harga</th>
-                                <th>Stok</th>
-                                <th>Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach($produk_data as $p): ?>
-                            <tr>
-                                <td><img src="../frontend/images/produk/<?= htmlspecialchars($p['gambar']) ?>" width="50" height="50" style="object-fit:cover; border-radius:5px; border: 1px solid #ddd;"></td>
-                                <td class="fw-bold"><?= htmlspecialchars($p['nama_produk']) ?></td>
-                                <td><span class="badge bg-secondary"><?= htmlspecialchars($p['nama_kategori']) ?></span></td>
-                                <td>Rp <?= number_format($p['harga'], 0, ',', '.') ?></td>
-                                <td>
-                                    <?php if($p['stok'] <= 0): ?>
-                                        <span class="text-danger fw-bold"><?= $p['stok'] ?> Pcs (Habis)</span>
-                                    <?php else: ?>
-                                        <?= $p['stok'] ?> Pcs
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-sage" data-bs-toggle="modal" data-bs-target="#editModal<?= $p['id'] ?>">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </button>
-                                </td>
-                            </tr>
-
-                            <div class="modal fade" id="editModal<?= $p['id'] ?>" tabindex="-1" aria-hidden="true">
-                                <div class="modal-dialog modal-sm modal-dialog-centered">
-                                    <div class="modal-content">
-                                        <div class="modal-header bg-sage-primary text-white">
-                                            <h6 class="modal-title fw-bold">Edit: <?= htmlspecialchars($p['nama_produk']) ?></h6>
-                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <form method="POST" action="">
-                                            <div class="modal-body">
-                                                <input type="hidden" name="id_produk" value="<?= $p['id'] ?>">
-                                                
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold">Harga Baru (Rp)</label>
-                                                    <input type="number" name="harga" class="form-control" value="<?= $p['harga'] ?>" required>
-                                                </div>
-                                                
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold">Update Stok</label>
-                                                    <input type="number" name="stok" class="form-control" value="<?= $p['stok'] ?>" required>
-                                                    <small class="text-muted d-block mt-1">*Jika stok minus (-1), ubah jadi angka positif.</small>
-                                                </div>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
-                                                <button type="submit" name="edit_produk" class="btn btn-sage btn-sm fw-bold">Simpan</button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+        <div class="card bg-white p-4">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th width="5%">No</th>
+                            <th width="15%">Gambar</th>
+                            <th width="25%">Nama Produk</th>
+                            <th width="15%">Harga</th>
+                            <th width="10%">Stok</th>
+                            <th width="25%">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php $no = 1; foreach($produk_list as $p): ?>
+                        <tr>
+                            <td class="fw-bold text-muted"><?= $no++ ?></td>
+                            <td><img src="../frontend/images/produk/<?= htmlspecialchars($p['gambar']) ?>" width="60" height="60" style="object-fit:cover; border-radius:10px; border: 1px solid #ddd;"></td>
+                            <td class="fw-bold"><?= htmlspecialchars($p['nama_produk']) ?></td>
+                            <td class="text-success fw-bold">Rp <?= number_format($p['harga'], 0, ',', '.') ?></td>
+                            <td>
+                                <?php if($p['stok'] > 5): ?>
+                                    <span class="badge bg-success bg-opacity-25 text-success px-2 py-1 rounded-pill"><?= $p['stok'] ?> Pcs</span>
+                                <?php elseif($p['stok'] >= 0): ?>
+                                    <span class="badge bg-warning bg-opacity-25 text-warning px-2 py-1 rounded-pill"><?= $p['stok'] ?> Pcs</span>
+                                <?php else: ?>
+                                    <span class="badge bg-danger bg-opacity-25 text-danger px-2 py-1 rounded-pill"><?= $p['stok'] ?> Pcs</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <a href="edit_produk.php?id=<?= $p['id'] ?>" class="btn btn-sm btn-light text-primary border rounded-pill px-3 shadow-sm me-1"><i class="fas fa-edit"></i> Edit</a>
+                                <button type="button" class="btn btn-sm btn-light text-danger border rounded-pill px-3 shadow-sm" onclick="confirmDelete(<?= $p['id'] ?>)"><i class="fas fa-trash"></i> Hapus</button>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                        
+                        <?php if(count($produk_list) == 0): ?>
+                        <tr><td colspan="6" class="text-center py-4 text-muted">Belum ada produk.</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+function confirmDelete(id) {
+    Swal.fire({
+        title: 'Hapus Produk?',
+        text: "Data yang dihapus tidak bisa dikembalikan!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#7cb3a1',
+        confirmButtonText: '<i class="fas fa-trash"></i> Ya, Hapus!',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = "produk.php?hapus=" + id;
+        }
+    })
+}
+</script>
+
 </body>
 </html>

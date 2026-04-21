@@ -80,28 +80,117 @@ body {
     box-shadow: 0 0 0 0.25rem rgba(132, 169, 140, 0.25);
 }
 
-/* --- CHATBOT UI --- */
+/* --- CHATBOT UI ENHANCEMENT --- */
 #chatbot-container {
-    border-radius: 16px;
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 350px;
+    height: 450px;
+    background-color: white;
+    border-radius: 20px;
+    display: none;
+    flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    z-index: 9999;
     overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
-    border: 1px solid rgba(0,0,0,0.1);
+    border: 1px solid rgba(0,0,0,0.05);
 }
+
 .chatbot-header {
     background-color: var(--xriva-dark);
+    color: white;
     padding: 15px 20px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
+
+.chat-body {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    background-color: #fcfdfc;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Bubble Chat Bot */
+.bot-message {
+    background-color: #e9ecef;
+    color: #333;
+    padding: 10px 14px;
+    border-radius: 15px 15px 15px 5px;
+    max-width: 85%;
+    font-size: 0.9rem;
+    align-self: flex-start;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+
+/* Bubble Chat User */
+.user-message {
+    background-color: var(--xriva-primary);
+    color: white;
+    padding: 10px 14px;
+    border-radius: 15px 15px 5px 15px;
+    max-width: 85%;
+    font-size: 0.9rem;
+    align-self: flex-end;
+    font-weight: 500;
+}
+
+/* Tombol Saran (Quick Replies) */
+.chat-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 5px;
+}
+.btn-suggestion {
+    font-size: 0.75rem;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--xriva-primary);
+    background: white;
+    color: var(--xriva-dark);
+    transition: all 0.2s;
+    cursor: pointer;
+}
+.btn-suggestion:hover {
+    background-color: var(--xriva-primary);
+    color: white;
+}
+
+.chat-input {
+    padding: 15px;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 10px;
+}
+
+.chat-input input {
+    flex: 1;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    padding: 8px 15px;
+    outline: none;
+}
+
 #chatbot-toggle {
-    border-radius: 50%;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
     width: 60px;
     height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.3s ease;
-}
-#chatbot-toggle:hover {
-    transform: scale(1.1);
+    border-radius: 50%;
+    border: none;
+    background-color: var(--xriva-dark);
+    color: white;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    cursor: pointer;
+    z-index: 9999;
 }
 
 /* --- TEXT COLORS --- */
