@@ -31,51 +31,55 @@ if (isset($_POST['register'])) {
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Daftar Akun - XrivaStore</title>
+    <title>Daftar Akun - Xriva Eyewear</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="frontend/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif;}
+    </style>
 </head>
-<body class="bg-light d-flex align-items-center" style="height: 100vh;">
+<body class="d-flex align-items-center vh-100">
 
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-5">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-sage-primary text-white text-center fw-bold py-3">
-                    Buat Akun Baru
+            <div class="card shadow-lg border-0" style="border-radius: 20px; overflow: hidden;">
+                <div class="card-header text-white text-center fw-bold py-3" style="background-color: #4a7c6b;">
+                    <i class="fas fa-glasses me-2"></i> Buat Akun Xriva Eyewear
                 </div>
                 <div class="card-body p-4">
                     <?php if(isset($error)): ?>
-                        <div class="alert alert-danger"><?= $error ?></div>
+                        <div class="alert alert-danger rounded-3"><?= $error ?></div>
                     <?php endif; ?>
                     <?php if(isset($sukses)): ?>
-                        <div class="alert alert-success"><?= $sukses ?> <a href="login.php">Login di sini</a></div>
+                        <div class="alert alert-success rounded-3"><?= $sukses ?> <a href="login.php" class="fw-bold">Login di sini</a></div>
                     <?php endif; ?>
 
                     <form method="POST">
                         <div class="mb-3">
-                            <label>Nama Lengkap</label>
+                            <label class="small fw-bold text-muted">Nama Lengkap</label>
                             <input type="text" name="nama" class="form-control" required>
                         </div>
                         <div class="mb-3">
-                            <label>Email</label>
+                            <label class="small fw-bold text-muted">Email</label>
                             <input type="email" name="email" class="form-control" required>
                         </div>
                         <div class="mb-3">
-                            <label>Password</label>
+                            <label class="small fw-bold text-muted">Password</label>
                             <input type="password" name="password" class="form-control" required>
                         </div>
                         <div class="mb-3">
-                            <label>No. HP</label>
-                            <input type="text" name="no_hp" class="form-control" required>
+                            <label class="small fw-bold text-muted">No. HP (Angka Saja)</label>
+                            <input type="number" name="no_hp" class="form-control" placeholder="Contoh: 08123456789" required>
                         </div>
-                        <div class="mb-3">
-                            <label>Alamat Lengkap</label>
+                        <div class="mb-4">
+                            <label class="small fw-bold text-muted">Alamat Lengkap</label>
                             <textarea name="alamat" class="form-control" rows="2" required></textarea>
                         </div>
-                        <button type="submit" name="register" class="btn btn-sage w-100 fw-bold">Daftar Sekarang</button>
-                        <div class="text-center mt-3">
-                            Sudah punya akun? <a href="login.php" class="text-sage-dark text-decoration-none fw-bold">Login</a>
+                        <button type="submit" name="register" class="btn text-white w-100 fw-bold py-2 mb-3" style="background-color: #7cb3a1; border-radius: 10px;">Daftar Sekarang</button>
+                        
+                        <div class="text-center small text-muted">
+                            Sudah punya akun? <a href="login.php" class="text-decoration-none fw-bold" style="color: #4a7c6b;">Login</a>
                         </div>
                     </form>
                 </div>
@@ -84,5 +88,6 @@ if (isset($_POST['register'])) {
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

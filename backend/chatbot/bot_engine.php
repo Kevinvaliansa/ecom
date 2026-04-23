@@ -1,103 +1,110 @@
 <?php
+session_start();
 require_once '../config/database.php';
-header('Content-Type: application/json');
 
-// Menerima pesan dari frontend (Format JSON)
-$data = json_decode(file_get_contents("php://input"), true);
+header("Access-Control-Allow-Origin: *");
+header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Methods: POST");
 
-if (!$data || !isset($data['message'])) {
-    echo json_encode(["reply" => "Maaf, pesan tidak terbaca."]);
+$data = json_decode(file_get_contents("php://input"));
+
+if (!isset($data->message) || empty(trim($data->message))) {
+    echo json_encode(["reply" => "Pesan tidak boleh kosong ya kak. 😊"]);
     exit;
 }
 
-$pesan = strtolower(trim($data['message']));
-$response = "";
+$pesanUser = strtolower(trim($data->message));
+$pesanUser = preg_replace('/[^\w\s]/', '', $pesanUser); 
+$words = explode(" ", $pesanUser);
 
-// ==========================================
-// LOGIKA "OTAK" CHATBOT (Rule-Based AI)
-// ==========================================
-
-// Fitur 1: Sapaan
-if (strpos($pesan, 'halo') !== false || strpos($pesan, 'hai') !== false || strpos($pesan, 'pagi') !== false) {
-    $response = "Halo! Saya Asisten Belanja AI XrivaStore. Ada yang bisa saya bantu? Kamu bisa tanya soal harga, stok, promo, atau cara belanja.";
-} 
-// Fitur 2: Lokasi Toko
-elseif (strpos($pesan, 'lokasi') !== false || strpos($pesan, 'alamat') !== false || strpos($pesan, 'dimana') !== false) {
-    $response = "Toko fisik kami berlokasi di <b>Jl. Margonda Raya No. 100, Depok</b>. Tapi kamu bisa belanja lebih mudah langsung lewat website ini!";
-}
-// Fitur 3: Jam Operasional
-elseif (strpos($pesan, 'jam berapa') !== false || strpos($pesan, 'buka') !== false || strpos($pesan, 'tutup') !== false) {
-    $response = "Kami melayani pesanan website 24 jam! Untuk proses pengiriman dilakukan pada jam operasional: <b>Senin-Sabtu (09.00 - 17.00 WIB)</b>.";
-}
-// Fitur 4: Garansi/Retur
-elseif (strpos($pesan, 'garansi') !== false || strpos($pesan, 'retur') !== false || strpos($pesan, 'rusak') !== false) {
-    $response = "Jangan khawatir! Semua produk kami bergaransi 7 hari setelah barang diterima. Pastikan kamu merekam video unboxing ya untuk proses klaim.";
-}
-// Fitur 5: Promo/Diskon
-elseif (strpos($pesan, 'promo') !== false || strpos($pesan, 'diskon') !== false || strpos($pesan, 'murah') !== false) {
-    $response = "Saat ini kami sedang ada promo <b>Gratis Ongkir</b> untuk wilayah Jabodetabek dengan minimal belanja Rp 100.000! Yuk buruan checkout.";
-}
-// Fitur 6: Info Restock
-elseif (strpos($pesan, 'kapan') !== false || strpos($pesan, 'restock') !== false || strpos($pesan, 'lama') !== false) {
-    $response = "Untuk produk yang stoknya sedang kosong, biasanya kami akan melakukan restock dalam <b>3-5 hari kerja</b>. Pantau terus katalog kami ya!";
-}
-// Fitur 7: Cara Beli / Checkout
-elseif (strpos($pesan, 'cara beli') !== false || strpos($pesan, 'checkout') !== false || strpos($pesan, 'bayar') !== false) {
-    $response = "Gampang banget! <br>1. Pastikan kamu sudah Login. <br>2. Klik tombol 'Tambah' pada produk di Beranda. <br>3. Buka menu Keranjang di atas. <br>4. Klik 'Lanjut Pembayaran' dan pilih metode transfer atau COD.";
-} 
-// Fitur 8: Rekomendasi Produk
-elseif (strpos($pesan, 'rekomendasi') !== false || strpos($pesan, 'terbaru') !== false) {
-    // Ambil 2 produk terbaru dari database
-    $stmt = $conn->query("SELECT nama_produk, harga FROM produk ORDER BY id DESC LIMIT 2");
-    $produk = $stmt->fetchAll();
+// ===================================================================
+// FUNGSI DATABASE
+// ===================================================================
+function getProdukByKategori($conn, $kategori) {
+    $stmt = $conn->prepare("SELECT nama_produk, harga FROM produk WHERE kategori LIKE ? AND stok > 0 LIMIT 5");
+    $stmt->execute(["%$kategori%"]);
+    $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    if (count($produk) > 0) {
-        $response = "Ini dia beberapa rekomendasi produk terbaik kami saat ini:<br>";
-        foreach ($produk as $p) {
-            $response .= "- <b>" . $p['nama_produk'] . "</b> (Rp " . number_format($p['harga'], 0, ',', '.') . ")<br>";
+    if (count($items) > 0) {
+        $list = "Untuk kategori <b>$kategori</b>, Xriva punya koleksi ini:<br><ul>";
+        foreach ($items as $item) {
+            $list .= "<li>" . $item['nama_produk'] . " (Rp " . number_format($item['harga'], 0, ',', '.') . ")</li>";
         }
-        $response .= "Tertarik? Silakan cek langsung di katalog beranda ya!";
-    } else {
-        $response = "Maaf, saat ini belum ada produk baru di toko kami.";
+        $list .= "</ul>Cek selengkapnya di menu filter ya! 😊";
+        return $list;
     }
+    return "Maaf kak, stok untuk kategori <b>$kategori</b> lagi kosong.";
 }
-// Fitur 9: Cek Harga & Stok (Dinamis dari Database)
-elseif (strpos($pesan, 'harga') !== false || strpos($pesan, 'stok') !== false || strpos($pesan, 'ada') !== false) {
-    // Mencari apakah user menyebutkan nama produk di database
-    $stmt = $conn->query("SELECT nama_produk, harga, stok FROM produk");
-    $semua_produk = $stmt->fetchAll();
-    $ditemukan = false;
 
-    foreach ($semua_produk as $p) {
-        $nama_produk_kecil = strtolower($p['nama_produk']);
-        // Cek jika nama produk ada di dalam kalimat yang diketik user
-        if (strpos($pesan, $nama_produk_kecil) !== false) {
-            $status_stok = ($p['stok'] > 0) ? "stoknya sisa <b>" . $p['stok'] . " pcs</b>" : "<b>sedang kosong (Habis)</b>";
-            $response = "Untuk produk <b>" . $p['nama_produk'] . "</b>, harganya <b>Rp " . number_format($p['harga'], 0, ',', '.') . "</b> dan saat ini " . $status_stok . ".";
-            $ditemukan = true;
-            break; // Hentikan pencarian jika produk sudah ketemu
+// ===================================================================
+// KNOWLEDGE BASE & FUZZY LOGIC
+// ===================================================================
+$intents = [
+    "sapaan" => ["halo", "hai", "pagi", "siang", "sore", "malam", "p", "permisi", "oi"],
+    "kacamata_minus" => ["minus", "rabun", "lensa", "silinder", "baca", "penglihatan"],
+    "kacamata_gaya" => ["gaya", "fashion", "hitam", "jalan", "pantai", "sunglasses", "kece", "keren"],
+    "pembayaran" => ["bayar", "transfer", "cod", "dana", "ovo", "gopay", "rekening", "harga"],
+    "apresiasi" => ["mantap", "oke", "ok", "sip", "thanks", "terima", "kasih", "bagus", "keren", "siap"],
+    "random_tanya" => ["siapa", "kamu", "apa", "nama", "pencipta", "buat"]
+];
+
+$best_intent = "unknown";
+$highest_score = 0;
+$threshold = 2; // Batas toleransi typo (jumlah karakter yang salah)
+
+foreach ($words as $uWord) {
+    // Abaikan kata yang terlalu pendek (seperti 'di', 'ke', 'ya')
+    if (strlen($uWord) < 2) continue; 
+
+    foreach ($intents as $intent_name => $keywords) {
+        foreach ($keywords as $key) {
+            // Cek kecocokan persis
+            if ($uWord == $key) {
+                $score = 10; 
+            } else {
+                // Cek Levenshtein Distance untuk menangani TYPO
+                $dist = levenshtein($uWord, $key);
+                // Jika jarak typo kecil, anggap cocok
+                $score = ($dist <= $threshold) ? (5 - $dist) : 0;
+            }
+
+            if ($score > $highest_score) {
+                $highest_score = $score;
+                $best_intent = $intent_name;
+            }
         }
     }
-
-    if (!$ditemukan) {
-        $response = "Maaf, saya tidak menemukan produk yang kamu maksud. Bisa sebutkan nama produknya secara spesifik? (Contoh: 'Berapa harga kursi?')";
-    }
-} 
-// Fitur 10: Fallback (Jika bot tidak mengerti)
-else {
-    $response = "Maaf, saya belum mengerti maksudmu. Coba tanyakan hal lain seperti: <br>- <i>'Rekomendasi produk'</i> <br>- <i>'Dimana lokasi toko?'</i> <br>- <i>'Berapa harga kursi?'</i>";
 }
 
-if (strpos($pesan, 'rekomendasi') !== false) {
-    $stmt = $conn->query("SELECT nama_produk, harga FROM produk ORDER BY harga ASC LIMIT 2");
-    $items = $stmt->fetchAll();
-    $reply = "Berikut rekomendasi produk terbaik buat kamu: <br>";
-    foreach($items as $it) {
-        $reply .= "- <b>" . $it['nama_produk'] . "</b> (Rp " . number_format($it['harga'],0,',','.') . ")<br>";
+// ===================================================================
+// RESPONSE ENGINE
+// ===================================================================
+$reply = "";
+
+if ($highest_score >= 3) { // Minimal skor untuk dianggap valid
+    switch ($best_intent) {
+        case "sapaan":
+            $reply = "Halo kak! Ada yang bisa Asisten Xriva bantu hari ini? Ingin cari kacamata gaya atau minus?";
+            break;
+        case "kacamata_minus":
+            $reply = getProdukByKategori($conn, "Kacamata Minus");
+            break;
+        case "kacamata_gaya":
+            $reply = getProdukByKategori($conn, "Kacamata Gaya");
+            break;
+        case "pembayaran":
+            $reply = "Pembayaran di Xriva bisa via <b>Transfer (BCA/Mandiri)</b>, <b>Dana/OVO</b>, atau <b>COD</b> biar aman kak! 💳";
+            break;
+        case "apresiasi":
+            $reply = "Sama-sama kak! 😊 Senang bisa membantu. Ada lagi yang ingin ditanyakan?";
+            break;
+        case "random_tanya":
+            $reply = "Aku adalah AI Asisten Xriva Eyewear. Tugasku membantumu mencari kacamata terbaik! 😎";
+            break;
     }
-    $response = $reply . " Mau saya bantu masukkan ke keranjang?";
+} else {
+    $reply = "Waduh, aku kurang paham maksudnya kak. 😅 Coba pakai kata kunci seperti 'kacamata gaya', 'kacamata minus', atau 'cara bayar'.";
 }
 
-// Mengembalikan jawaban ke frontend dalam format JSON
-echo json_encode(["reply" => $response]);
+echo json_encode(["reply" => $reply]);
 ?>
