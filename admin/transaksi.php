@@ -2,153 +2,168 @@
 session_start();
 require_once '../backend/config/database.php';
 
-// CEK LOGIN DAN ROLE ADMIN
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
-    header("Location: ../login.php"); 
-    exit;
+    header("Location: ../login.php"); exit;
 }
+if (empty($_SESSION['csrf_token'])) $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
-// ==========================================
-// LOGIKA UPDATE STATUS PESANAN
-// ==========================================
+// UPDATE STATUS
 if (isset($_POST['update_status'])) {
-    $id_transaksi = $_POST['id_transaksi'];
+    $id_trx = (int)$_POST['id_transaksi'];
     $status_baru = $_POST['status_pesanan'];
-    
-    $update = $conn->prepare("UPDATE transaksi SET status_pesanan = ? WHERE id = ?");
-    $update->execute([$status_baru, $id_transaksi]);
-    
-    // NAMA STATUS UNTUK POP-UP
-    $nama_status = strtoupper($status_baru);
-    
-    // ==============================================================
-    // POP-UP SWEETALERT2 UNTUK UPDATE STATUS BERHASIL
-    // ==============================================================
-    echo "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'><script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script></head><body style='background-color: #f4f7f6;'>";
-    echo "<script>
-        Swal.fire({
-            title: 'Status Diperbarui!',
-            text: 'Pesanan #$id_transaksi sekarang berstatus $nama_status.',
-            icon: 'success',
-            confirmButtonColor: '#4a7c6b',
-            confirmButtonText: 'Oke'
-        }).then((result) => {
-            window.location.href = 'transaksi.php';
-        });
-    </script></body></html>";
-    exit;
+    $conn->prepare("UPDATE transaksi SET status_pesanan=? WHERE id=?")->execute([$status_baru, $id_trx]);
+    $_SESSION['admin_msg'] = ['type'=>'success','text'=>"Pesanan #$id_trx diperbarui menjadi ".strtoupper($status_baru)."."];
+    header("Location: transaksi.php"); exit;
 }
 
-// AMBIL SEMUA DATA TRANSAKSI BESERTA DATA USER PEMBELI
-$stmt = $conn->query("
-    SELECT t.*, u.nama, u.email, u.no_hp, u.alamat 
-    FROM transaksi t 
-    JOIN users u ON t.id_user = u.id 
-    ORDER BY t.tanggal_transaksi DESC
-");
-$transaksi = $stmt->fetchAll();
-?>
+// FILTER
+$filter_status = $_GET['status'] ?? 'semua';
+$search_trx    = trim($_GET['search'] ?? '');
 
+$where_parts = ["1=1"];
+$params      = [];
+if ($filter_status !== 'semua') { $where_parts[] = "t.status_pesanan = ?"; $params[] = $filter_status; }
+if ($search_trx) { $where_parts[] = "(u.nama LIKE ? OR u.no_hp LIKE ? OR t.id LIKE ?)"; $params[] = "%$search_trx%"; $params[] = "%$search_trx%"; $params[] = "%$search_trx%"; }
+
+$where_sql = implode(' AND ', $where_parts);
+$stmt = $conn->prepare("SELECT t.*, u.nama, u.email, u.no_hp, u.alamat, a.nama AS approved_by_name FROM transaksi t JOIN users u ON t.id_user=u.id LEFT JOIN users a ON t.approved_by=a.id WHERE $where_sql ORDER BY t.tanggal_transaksi DESC");
+$stmt->execute($params);
+$transaksi = $stmt->fetchAll();
+
+// Counts per status
+$counts_raw = $conn->query("SELECT status_pesanan, COUNT(*) FROM transaksi GROUP BY status_pesanan")->fetchAll(PDO::FETCH_KEY_PAIR);
+$counts = ['semua' => array_sum($counts_raw), 'pending'=>$counts_raw['pending']??0, 'diproses'=>$counts_raw['diproses']??0, 'dikirim'=>$counts_raw['dikirim']??0, 'selesai'=>$counts_raw['selesai']??0, 'batal'=>$counts_raw['batal']??0];
+$pending_count = $counts['pending'];
+
+$active_page = 'transaksi';
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Kelola Pesanan - Admin Xriva Eyewear</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pesanan Masuk - XrivaStore Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        :root { --sage: #4a7c6b; --sage-light: #7cb3a1; --bg-light: #f4f7f6; }
-        body { background-color: var(--bg-light); font-family: 'Segoe UI', sans-serif; }
-        
-        .sidebar { min-height: 100vh; background-color: var(--sage); color: white; border-top-right-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 4px 0 15px rgba(0,0,0,0.05); }
-        .sidebar .nav-link { color: rgba(255,255,255,0.8); margin-bottom: 8px; border-radius: 10px; padding: 12px 20px; transition: 0.3s; font-weight: 500; }
-        .sidebar .nav-link:hover, .sidebar .nav-link.active { background-color: rgba(255,255,255,0.2); color: white; }
-        
-        .card-custom { border-radius: 16px; border: none; box-shadow: 0 5px 20px rgba(0,0,0,0.05); background: white; }
-        .table thead { background-color: #f8f9fa; }
-        .table th { border: none; padding: 15px; color: #666; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; }
-        .table td { vertical-align: middle; padding: 15px; border-color: #f1f1f1; }
-        
-        .btn-sage { background-color: var(--sage-light); color: white; border: none; border-radius: 8px; font-weight: bold; }
-        .btn-sage:hover { background-color: var(--sage); color: white; }
-        
-        .badge-status { padding: 8px 12px; border-radius: 8px; font-weight: bold; font-size: 0.8rem; }
-    </style>
+    <link rel="stylesheet" href="includes/admin.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 
-<div class="d-flex">
-    <div class="sidebar p-4" style="width: 280px; flex-shrink: 0;">
-        <h4 class="fw-bold mb-5 text-center"><i class="fas fa-glasses me-2"></i> AdminPanel</h4>
-        <ul class="nav flex-column">
-            <li class="nav-item"><a class="nav-link" href="produk.php"><i class="fas fa-box-open me-3"></i> Kelola Produk</a></li>
-            <li class="nav-item"><a class="nav-link active" href="transaksi.php"><i class="fas fa-shopping-cart me-3"></i> Pesanan Masuk</a></li>
-            <li class="nav-item"><a class="nav-link" href="laporan.php"><i class="fas fa-chart-line me-3"></i> Laporan Penjualan</a></li>
-            <li class="nav-item mt-5"><a class="nav-link text-danger" href="../logout.php"><i class="fas fa-sign-out-alt me-3"></i> Keluar</a></li>
-        </ul>
+<?php include 'includes/sidebar.php'; ?>
+
+<div class="main-content">
+    <!-- Topbar -->
+    <div class="topbar">
+        <div>
+            <div class="topbar-title"><i class="fas fa-shopping-bag me-2" style="color:var(--sage)"></i>Pesanan Masuk</div>
+            <div class="topbar-sub">Kelola dan update status pengiriman</div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <?php if ($pending_count > 0): ?>
+            <span class="badge rounded-pill" style="background:#fff3cd;color:#856404;font-size:.82rem;padding:6px 14px;">
+                <i class="fas fa-clock me-1"></i> <?= $pending_count ?> menunggu
+            </span>
+            <?php endif; ?>
+            <div class="topbar-avatar"><?= strtoupper(substr($_SESSION['user_nama'],0,1)) ?></div>
+        </div>
     </div>
 
-    <div class="p-5 w-100">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="fw-bold text-dark m-0">Pesanan Masuk</h2>
-                <p class="text-muted">Kelola dan update status pengiriman pesanan pelanggan Anda.</p>
+    <div class="page-content">
+
+        <!-- Filter Bar -->
+        <div class="admin-card mb-4">
+            <div class="admin-card-body">
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <?php
+                    $status_tabs = [
+                        'semua'   => ['label'=>'Semua',     'icon'=>'fa-list',         'color'=>'#6c757d'],
+                        'pending' => ['label'=>'Menunggu',  'icon'=>'fa-clock',        'color'=>'#856404'],
+                        'diproses'=> ['label'=>'Diproses',  'icon'=>'fa-cog',          'color'=>'#055160'],
+                        'dikirim' => ['label'=>'Dikirim',   'icon'=>'fa-truck',        'color'=>'#084298'],
+                        'selesai' => ['label'=>'Selesai',   'icon'=>'fa-check-circle', 'color'=>'#0a3622'],
+                        'batal'   => ['label'=>'Dibatalkan','icon'=>'fa-times-circle', 'color'=>'#842029'],
+                    ];
+                    foreach ($status_tabs as $key => $tab): ?>
+                    <a href="?status=<?= $key ?>&search=<?= urlencode($search_trx) ?>"
+                       class="filter-pill <?= $filter_status==$key ? 'active':'' ?>">
+                        <i class="fas <?= $tab['icon'] ?>"></i>
+                        <?= $tab['label'] ?>
+                        <span class="badge rounded-pill ms-1" style="background:rgba(0,0,0,.12);font-size:.68rem;"><?= $counts[$key] ?></span>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+                <!-- Search -->
+                <form method="GET" class="d-flex gap-2">
+                    <input type="hidden" name="status" value="<?= htmlspecialchars($filter_status) ?>">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" name="search" class="form-control border-start-0"
+                               placeholder="Cari nama pelanggan, HP, atau ID..."
+                               value="<?= htmlspecialchars($search_trx) ?>">
+                    </div>
+                    <button class="btn btn-sage rounded-pill px-4">Cari</button>
+                    <?php if ($search_trx): ?>
+                    <a href="?status=<?= $filter_status ?>" class="btn btn-outline-secondary rounded-pill px-3">Reset</a>
+                    <?php endif; ?>
+                </form>
             </div>
         </div>
 
-        <div class="card card-custom p-0 overflow-hidden">
+        <!-- Tabel Transaksi -->
+        <div class="admin-card mb-4">
+            <div class="admin-card-header">
+                <h6><i class="fas fa-receipt me-2" style="color:var(--sage)"></i>
+                    <?= $status_tabs[$filter_status]['label'] ?? 'Semua' ?> Pesanan
+                </h6>
+                <span class="text-muted" style="font-size:.8rem;"><?= count($transaksi) ?> pesanan</span>
+            </div>
             <div class="table-responsive">
-                <table class="table mb-0">
+                <table class="table admin-table mb-0">
                     <thead>
                         <tr>
-                            <th>ID & Waktu</th>
-                            <th>Info Pembeli</th>
-                            <th>Total Tagihan</th>
-                            <th>Metode Pembayaran</th>
+                            <th>#ID</th>
+                            <th>Pelanggan</th>
+                            <th>Total</th>
+                            <th>Metode</th>
+                            <th>Waktu</th>
                             <th>Status</th>
                             <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach($transaksi as $t): ?>
+                        <?php foreach ($transaksi as $t): ?>
+                        <?php
+                            $badgeClass = match($t['status_pesanan']) {
+                                'pending'=>'badge-pending','diproses'=>'badge-diproses',
+                                'dikirim'=>'badge-dikirim','selesai'=>'badge-selesai',
+                                default=>'badge-batal'
+                            };
+                            $labelMap = ['pending'=>'Menunggu Bayar','diproses'=>'Diproses','dikirim'=>'Dikirim','selesai'=>'Selesai','batal'=>'Dibatalkan'];
+                        ?>
                         <tr>
+                            <td><span class="fw-bold text-muted">#<?= $t['id'] ?></span></td>
                             <td>
-                                <span class="fw-bold text-dark fs-6">#<?= $t['id'] ?></span><br>
-                                <small class="text-muted"><?= date('d M Y, H:i', strtotime($t['tanggal_transaksi'])) ?></small>
+                                <div class="fw-semibold text-dark"><?= htmlspecialchars($t['nama']) ?></div>
+                                <div class="text-muted" style="font-size:.76rem;"><i class="fas fa-phone me-1"></i><?= htmlspecialchars($t['no_hp']) ?></div>
                             </td>
-                            <td>
-                                <div class="fw-bold text-dark"><?= htmlspecialchars($t['nama']) ?></div>
-                                <small class="text-muted"><i class="fas fa-phone-alt me-1"></i> <?= htmlspecialchars($t['no_hp']) ?></small>
-                            </td>
-                            <td class="fw-bold" style="color: #4a7c6b;">
-                                Rp <?= number_format($t['total_harga'], 0, ',', '.') ?>
-                            </td>
-                            <td>
-                                <span class="badge bg-light text-secondary border px-3 py-2"><?= htmlspecialchars($t['metode_pembayaran']) ?></span>
-                            </td>
-                            <td>
-                                <?php 
-                                    $s = $t['status_pesanan'];
-                                    if($s == 'pending') echo '<span class="badge-status bg-warning text-dark"><i class="fas fa-clock me-1"></i> Pending</span>';
-                                    elseif($s == 'diproses') echo '<span class="badge-status bg-info text-dark"><i class="fas fa-box me-1"></i> Diproses</span>';
-                                    elseif($s == 'dikirim') echo '<span class="badge-status bg-primary text-white"><i class="fas fa-truck me-1"></i> Dikirim</span>';
-                                    elseif($s == 'selesai') echo '<span class="badge-status bg-success text-white"><i class="fas fa-check-circle me-1"></i> Selesai</span>';
-                                    else echo '<span class="badge-status bg-danger text-white"><i class="fas fa-times-circle me-1"></i> Batal</span>';
-                                ?>
-                            </td>
+                            <td class="fw-bold" style="color:var(--sage)">Rp <?= number_format($t['total_harga'],0,',','.') ?></td>
+                            <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($t['metode_pembayaran']) ?></span></td>
+                            <td class="text-muted" style="font-size:.78rem;"><?= date('d M Y<\b\r>H:i', strtotime($t['tanggal_transaksi'])) ?></td>
+                            <td><span class="<?= $badgeClass ?>"><?= $labelMap[$t['status_pesanan']] ?? $t['status_pesanan'] ?></span></td>
                             <td class="text-center">
-                                <button class="btn btn-sm btn-outline-dark fw-bold rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalDetail<?= $t['id'] ?>">
-                                    Cek Detail
+                                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-semibold"
+                                        data-bs-toggle="modal" data-bs-target="#modal<?= $t['id'] ?>">
+                                    Detail
                                 </button>
                             </td>
                         </tr>
                         <?php endforeach; ?>
-
-                        <?php if(count($transaksi) == 0): ?>
+                        <?php if (empty($transaksi)): ?>
                         <tr>
-                            <td colspan="6" class="text-center py-5">
-                                <i class="fas fa-inbox fa-3x text-muted mb-3 opacity-25"></i>
-                                <h5 class="text-muted">Belum ada pesanan masuk.</h5>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="fas fa-inbox fa-3x mb-3 d-block opacity-25"></i>
+                                Tidak ada pesanan <?= $filter_status !== 'semua' ? "dengan status ini" : "" ?>.
                             </td>
                         </tr>
                         <?php endif; ?>
@@ -156,97 +171,106 @@ $transaksi = $stmt->fetchAll();
                 </table>
             </div>
         </div>
+
     </div>
 </div>
 
-<?php foreach($transaksi as $t): 
-    $s = $t['status_pesanan'];
-?>
-<div class="modal fade" id="modalDetail<?= $t['id'] ?>" tabindex="-1" aria-hidden="true">
+<!-- ── MODALS DETAIL PER TRANSAKSI ─────────────────────── -->
+<?php foreach ($transaksi as $t): ?>
+<?php $s = $t['status_pesanan']; ?>
+<div class="modal fade" id="modal<?= $t['id'] ?>" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content shadow-lg" style="border-radius: 16px; border: none;">
-            <div class="modal-header text-white" style="background-color: #4a7c6b; border-radius: 16px 16px 0 0; padding: 20px;">
-                <h5 class="modal-title fw-bold m-0"><i class="fas fa-receipt me-2"></i> Detail Pesanan #<?= $t['id'] ?></h5>
+        <div class="modal-content border-0" style="border-radius:18px;overflow:hidden;">
+            <div class="modal-header text-white border-0" style="background:var(--sage);padding:20px 24px;">
+                <h5 class="modal-title fw-bold m-0"><i class="fas fa-receipt me-2"></i>Pesanan #<?= $t['id'] ?></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            
-            <div class="modal-body p-4 p-md-5">
-                <div class="row g-4 mb-5">
-                    <div class="col-md-6 border-end-md">
-                        <div class="bg-light p-4 rounded-3 h-100 border">
-                            <h6 class="fw-bold text-muted mb-3 small text-uppercase"><i class="fas fa-map-marker-alt me-2"></i>Tujuan Pengiriman</h6>
-                            <p class="mb-1 fw-bold fs-5 text-dark"><?= htmlspecialchars($t['nama']) ?></p>
-                            <p class="mb-2 text-primary fw-bold"><i class="fas fa-phone me-2"></i><?= htmlspecialchars($t['no_hp']) ?></p>
-                            <p class="mb-0 text-muted small lh-lg"><?= nl2br(htmlspecialchars($t['alamat'])) ?></p>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="p-4 h-100">
-                            <h6 class="fw-bold text-muted mb-3 small text-uppercase"><i class="fas fa-sliders-h me-2"></i>Update Status</h6>
-                            
-                            <form action="" method="POST" class="d-flex flex-column gap-3">
-                                <input type="hidden" name="id_transaksi" value="<?= $t['id'] ?>">
-                                <select name="status_pesanan" class="form-select form-select-lg fw-bold text-dark bg-light" <?= ($s == 'batal' || $s == 'selesai') ? 'disabled' : '' ?>>
-                                    <option value="pending" <?= $s == 'pending' ? 'selected' : '' ?>>⏳ Menunggu Pembayaran</option>
-                                    <option value="diproses" <?= $s == 'diproses' ? 'selected' : '' ?>>📦 Sedang Diproses</option>
-                                    <option value="dikirim" <?= $s == 'dikirim' ? 'selected' : '' ?>>🚚 Sedang Dikirim</option>
-                                    <option value="selesai" <?= $s == 'selesai' ? 'selected' : '' ?>>✅ Selesai</option>
-                                    <option value="batal" <?= $s == 'batal' ? 'selected' : '' ?>>❌ Dibatalkan</option>
-                                </select>
-                                <button type="submit" name="update_status" class="btn btn-sage w-100 py-2" <?= ($s == 'batal' || $s == 'selesai') ? 'disabled' : '' ?>>Simpan Perubahan</button>
-                            </form>
-
-                            <?php if($s == 'selesai' || $s == 'batal'): ?>
-                                <div class="alert alert-secondary mt-3 mb-0 small text-center p-2 border-0">
-                                    Pesanan ini sudah dikunci permanen.
-                                </div>
+            <div class="modal-body p-0">
+                <div class="row g-0">
+                    <!-- Kiri: Info & Status -->
+                    <div class="col-md-6 border-end p-4">
+                        <h6 class="fw-bold text-muted mb-3 small text-uppercase"><i class="fas fa-map-marker-alt me-2"></i>Info Pengiriman</h6>
+                        <p class="fw-bold fs-6 mb-1 text-dark"><?= htmlspecialchars($t['nama']) ?></p>
+                        <p class="text-muted small mb-1"><i class="fas fa-phone me-2"></i><?= htmlspecialchars($t['no_hp']) ?></p>
+                        <p class="text-muted small mb-3"><i class="fas fa-map-pin me-2"></i><?= nl2br(htmlspecialchars($t['alamat'])) ?></p>
+                        <hr>
+                        <h6 class="fw-bold text-muted mb-3 small text-uppercase"><i class="fas fa-cog me-2"></i>Update Status</h6>
+                        <form method="POST">
+                            <input type="hidden" name="id_transaksi" value="<?= $t['id'] ?>">
+                            <select name="status_pesanan" class="form-select mb-3" <?= in_array($s,['batal','selesai']) ? 'disabled':'' ?>>
+                                <option value="pending"  <?= $s=='pending'  ? 'selected':'' ?>>⏳ Menunggu Pembayaran</option>
+                                <option value="diproses" <?= $s=='diproses' ? 'selected':'' ?>>📦 Sedang Diproses</option>
+                                <option value="dikirim"  <?= $s=='dikirim'  ? 'selected':'' ?>>🚚 Sedang Dikirim</option>
+                                <option value="selesai"  <?= $s=='selesai'  ? 'selected':'' ?>>✅ Selesai</option>
+                                <option value="batal"    <?= $s=='batal'    ? 'selected':'' ?>>❌ Dibatalkan</option>
+                            </select>
+                            <?php if (!in_array($s,['batal','selesai'])): ?>
+                            <button type="submit" name="update_status" class="btn btn-sage rounded-pill w-100 fw-bold">Simpan Perubahan</button>
+                            <?php else: ?>
+                            <div class="alert alert-secondary py-2 text-center small mb-0">Pesanan sudah dikunci.</div>
                             <?php endif; ?>
+                        </form>
+
+                        <!-- Approve / Reject bukti -->
+                        <?php if ($s === 'pending' && !empty($t['bukti_bayar'])): ?>
+                        <hr>
+                        <div class="d-grid gap-2 mt-2">
+                            <form id="formApprove<?= $t['id'] ?>" action="../backend/admin_verifikasi.php" method="POST">
+                                <input type="hidden" name="id_transaksi" value="<?= $t['id'] ?>">
+                                <input type="hidden" name="action" value="approve">
+                                <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                                <button type="button" onclick="confirmApprove(<?= $t['id'] ?>)" class="btn btn-success rounded-pill w-100 fw-bold">
+                                    <i class="fas fa-check me-2"></i>Setujui Pembayaran
+                                </button>
+                            </form>
+                            <form id="formReject<?= $t['id'] ?>" action="../backend/admin_verifikasi.php" method="POST">
+                                <input type="hidden" name="id_transaksi" value="<?= $t['id'] ?>">
+                                <input type="hidden" name="action" value="reject">
+                                <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                                <input type="hidden" name="reason" id="reason<?= $t['id'] ?>" value="">
+                                <button type="button" onclick="confirmReject(<?= $t['id'] ?>)" class="btn btn-outline-danger rounded-pill w-100 fw-bold">
+                                    <i class="fas fa-times me-2"></i>Tolak Bukti
+                                </button>
+                            </form>
                         </div>
+                        <?php endif; ?>
+                    </div>
+                    <!-- Kanan: Barang & Bukti -->
+                    <div class="col-md-6 p-4" style="background:#fafafa;">
+                        <h6 class="fw-bold text-muted mb-3 small text-uppercase"><i class="fas fa-box-open me-2"></i>Rincian Barang</h6>
+                        <?php
+                        $items = $conn->prepare("SELECT * FROM detail_transaksi WHERE id_transaksi=?");
+                        $items->execute([$t['id']]);
+                        $items = $items->fetchAll();
+                        ?>
+                        <?php foreach ($items as $item): ?>
+                        <div class="d-flex gap-3 mb-3 pb-3 border-bottom align-items-center">
+                            <img src="../frontend/images/produk/<?= htmlspecialchars($item['gambar']) ?>" style="width:50px;height:50px;border-radius:10px;object-fit:cover;border:1px solid #eee;">
+                            <div class="flex-grow-1">
+                                <div class="fw-semibold text-dark small"><?= htmlspecialchars($item['nama_produk'] ?? '-') ?></div>
+                                <div class="text-muted" style="font-size:.75rem;"><?= $item['jumlah'] ?> pcs × Rp <?= number_format($item['harga'],0,',','.') ?></div>
+                            </div>
+                            <div class="fw-bold text-dark small">Rp <?= number_format($item['harga']*$item['jumlah'],0,',','.') ?></div>
+                        </div>
+                        <?php endforeach; ?>
+                        <?php if (empty($items)): ?>
+                        <p class="text-muted small text-center py-3">Rincian tidak tersedia.</p>
+                        <?php endif; ?>
+                        <div class="d-flex justify-content-between pt-2 fw-bold">
+                            <span>Total Tagihan</span>
+                            <span style="color:var(--sage)">Rp <?= number_format($t['total_harga'],0,',','.') ?></span>
+                        </div>
+                        <!-- Bukti bayar -->
+                        <?php if (!empty($t['bukti_bayar'])): ?>
+                        <hr>
+                        <h6 class="fw-bold text-muted small text-uppercase mb-2"><i class="fas fa-image me-2"></i>Bukti Pembayaran</h6>
+                        <img src="../frontend/images/bukti/<?= htmlspecialchars($t['bukti_bayar']) ?>" class="rounded w-100" style="max-height:200px;object-fit:contain;border:1px solid #eee;">
+                        <?php elseif ($s == 'pending'): ?>
+                        <hr>
+                        <div class="text-center text-muted small py-2"><i class="fas fa-hourglass me-1"></i>Menunggu upload bukti dari pembeli.</div>
+                        <?php endif; ?>
                     </div>
                 </div>
-
-                <h6 class="fw-bold text-dark mb-3"><i class="fas fa-box-open me-2 text-sage"></i>Rincian Barang yang Dibeli</h6>
-                <div class="card border-0 bg-light rounded-3 p-3">
-                    <?php
-                    $stmt_dtl = $conn->prepare("SELECT * FROM detail_transaksi WHERE id_transaksi = ?");
-                    $stmt_dtl->execute([$t['id']]);
-                    $items = $stmt_dtl->fetchAll();
-                    
-                    if(count($items) > 0): ?>
-                        <div class="table-responsive">
-                            <table class="table table-borderless mb-0">
-                                <tbody>
-                                    <?php foreach($items as $item): ?>
-                                    <tr class="border-bottom">
-                                        <td style="width: 70px; padding: 10px 0;">
-                                            <img src="../frontend/images/produk/<?= htmlspecialchars($item['gambar']) ?>" class="rounded border bg-white" style="width: 55px; height: 55px; object-fit: cover;">
-                                        </td>
-                                        <td class="align-middle">
-                                            <h6 class="mb-1 fw-bold text-dark"><?= htmlspecialchars($item['nama_produk'] ?? 'Produk') ?></h6>
-                                            <small class="text-muted"><?= $item['jumlah'] ?> pcs &times; Rp <?= number_format($item['harga'], 0, ',', '.') ?></small>
-                                        </td>
-                                        <td class="text-end fw-bold align-middle text-dark">
-                                            Rp <?= number_format($item['harga'] * $item['jumlah'], 0, ',', '.') ?>
-                                        </td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php else: ?>
-                        <div class="text-center py-4 text-muted">
-                            <i class="fas fa-exclamation-circle fa-2x mb-2 opacity-50"></i><br>
-                            <span class="small">Rincian barang tidak tersedia (Pesanan Lama / Checkout Error)</span>
-                        </div>
-                    <?php endif; ?>
-                    
-                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-2">
-                        <span class="fw-bold text-muted text-uppercase small">Total Tagihan Pembeli:</span>
-                        <span class="fw-bold fs-4" style="color: #4a7c6b;">Rp <?= number_format($t['total_harga'], 0, ',', '.') ?></span>
-                    </div>
-                </div>
-
             </div>
         </div>
     </div>
@@ -254,5 +278,20 @@ $transaksi = $stmt->fetchAll();
 <?php endforeach; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<?php if (isset($_SESSION['admin_msg'])): $am = $_SESSION['admin_msg']; unset($_SESSION['admin_msg']); ?>
+<script>
+Swal.fire({ icon: '<?= $am["type"] ?>', title: '<?= $am["type"]==="success" ? "Sukses" : "Gagal" ?>', text: '<?= addslashes($am["text"]) ?>', confirmButtonColor: '#52796f' });
+</script>
+<?php endif; ?>
+<script>
+function confirmApprove(id) {
+    Swal.fire({ title:'Setujui pembayaran?', text:'Status akan diubah menjadi Diproses.', icon:'question', showCancelButton:true, confirmButtonText:'Ya, Setujui', confirmButtonColor:'#198754', cancelButtonColor:'#6c757d' })
+    .then(r => { if(r.isConfirmed) document.getElementById('formApprove'+id).submit(); });
+}
+function confirmReject(id) {
+    Swal.fire({ title:'Tolak bukti?', input:'textarea', inputLabel:'Alasan (opsional)', showCancelButton:true, confirmButtonText:'Tolak', confirmButtonColor:'#dc3545', cancelButtonColor:'#6c757d' })
+    .then(r => { if(r.isConfirmed) { document.getElementById('reason'+id).value=r.value||''; document.getElementById('formReject'+id).submit(); } });
+}
+</script>
 </body>
 </html>

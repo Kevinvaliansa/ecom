@@ -24,6 +24,7 @@ if (isset($_GET['hapus'])) {
     $id_wishlist = $_GET['hapus'];
     $hapus = $conn->prepare("DELETE FROM wishlist WHERE id = ? AND id_user = ?");
     $hapus->execute([$id_wishlist, $id_user]);
+    $_SESSION['toast'] = ['type' => 'warning', 'message' => 'Produk dihapus dari Wishlist.'];
     header("Location: wishlist.php"); exit;
 }
 
@@ -45,57 +46,7 @@ $inisial = strtoupper(substr($_SESSION['user_nama'], 0, 1));
 </head>
 <body class="bg-light">
 
-    <nav class="navbar navbar-expand-lg navbar-dark navbar-sage sticky-top shadow-sm py-2">
-        <div class="container">
-            <a class="navbar-brand fw-bold fs-4" href="index.php">
-                <i class="fas fa-leaf"></i> XrivaStore
-            </a>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-center gap-3">
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center <?= basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active fw-bold' : '' ?>" href="index.php">
-                            Home
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center <?= basename($_SERVER['PHP_SELF']) == 'wishlist.php' ? 'active fw-bold' : '' ?>" href="wishlist.php">
-                            <i class="fas fa-heart me-1"></i> Wishlist
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center <?= basename($_SERVER['PHP_SELF']) == 'cart.php' ? 'active fw-bold' : '' ?>" href="cart.php">
-                            <i class="fas fa-shopping-cart me-1"></i> Keranjang
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center <?= basename($_SERVER['PHP_SELF']) == 'history.php' ? 'active fw-bold' : '' ?>" href="history.php">
-                            <i class="fas fa-history me-1"></i> Pesanan
-                        </a>
-                    </li>
-                    
-                    <li class="nav-item dropdown ms-2 d-flex align-items-center border-start ps-3">
-                        <div class="rounded-circle d-flex justify-content-center align-items-center bg-white text-sage-dark fw-bold me-2 shadow-sm" style="width: 35px; height: 35px; font-size: 1rem;">
-                            <?= isset($inisial) ? $inisial : strtoupper(substr($_SESSION['user_nama'], 0, 1)) ?>
-                        </div>
-                        <a class="nav-link dropdown-toggle fw-bold text-white p-0" href="#" data-bs-toggle="dropdown">
-                            <?= htmlspecialchars($_SESSION['user_nama']) ?>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end mt-3 shadow border-0" style="border-radius: 12px;">
-                            <li><a class="dropdown-item py-2" href="profile.php"><i class="fas fa-user-circle text-muted me-2"></i> Profil Saya</a></li>
-                            <li><a class="dropdown-item py-2" href="history.php"><i class="fas fa-clipboard-list text-muted me-2"></i> Pesanan Saya</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger py-2" href="logout.php"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <?php include 'frontend/includes/navbar.php'; ?>
     <div class="container my-5 pb-5">
         <h3 class="mb-4 text-sage-dark fw-bold"><i class="fas fa-heart text-danger"></i> Wishlist Saya</h3>
 
@@ -109,8 +60,8 @@ $inisial = strtoupper(substr($_SESSION['user_nama'], 0, 1));
                             <i class="fas fa-times mt-1"></i>
                         </a>
 
-                        <div style="overflow: hidden; border-top-left-radius: 16px; border-top-right-radius: 16px;">
-                            <img src="frontend/images/produk/<?= htmlspecialchars($item['gambar']) ?>" class="card-img-top" style="height: 220px; object-fit: cover;">
+                        <div style="overflow: hidden; border-top-left-radius: 16px; border-top-right-radius: 16px; height: 200px; background: #f8f9fa; display:flex; align-items:center; justify-content:center;">
+                            <img src="frontend/images/produk/<?= htmlspecialchars($item['gambar']) ?>" class="card-img-top" style="max-height: 200px; width: auto; max-width: 100%; object-fit: contain; <?= $item['stok'] <= 0 ? 'filter: grayscale(100%); opacity: 0.6;' : '' ?>">
                         </div>
                         
                         <div class="card-body d-flex flex-column p-4 text-center">
@@ -137,10 +88,10 @@ $inisial = strtoupper(substr($_SESSION['user_nama'], 0, 1));
             <?php else: ?>
                 <div class="col-12 text-center py-5">
                     <div class="bg-white p-5 rounded-4 shadow-sm">
-                        <i class="far fa-heart fa-4x text-sage-light mb-3"></i>
+                        <i class="far fa-heart fa-4x text-sage mb-3 opacity-50"></i>
                         <h5 class="text-muted fw-bold">Wishlist kamu masih kosong.</h5>
                         <p class="text-muted">Yuk cari barang impianmu dan simpan di sini!</p>
-                        <a href="index.php" class="btn btn-sage mt-2 px-4 rounded-pill">Mulai Belanja</a>
+                        <a href="index.php" class="btn btn-sage mt-2 px-4 rounded-pill fw-bold">Mulai Belanja</a>
                     </div>
                 </div>
             <?php endif; ?>

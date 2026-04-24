@@ -5,7 +5,7 @@ require_once 'backend/config/database.php';
 // Jika sudah login, lempar sesuai rolenya
 if (isset($_SESSION['user_id'])) {
     if ($_SESSION['role'] == 'admin') {
-        header("Location: admin/produk.php");
+        header("Location: admin/dashboard.php");
     } else {
         header("Location: index.php");
     }
@@ -44,7 +44,7 @@ if (isset($_POST['login'])) {
 
         // Arahkan berdasarkan role
         if ($user['role'] == 'admin') {
-            header("Location: admin/produk.php");
+            header("Location: admin/dashboard.php");
         } else {
             header("Location: index.php");
         }
@@ -62,7 +62,7 @@ if (isset($_POST['login'])) {
     <title>Login - XrivaStore</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="frontend/css/style.css">
+    <link rel="stylesheet" href="frontend/css/style.css?v=<?= time() ?>">
 </head>
 <body class="bg-sage-light d-flex align-items-center" style="min-height: 100vh;">
 
@@ -92,7 +92,10 @@ if (isset($_POST['login'])) {
                                 <label class="form-label fw-bold text-muted small">Password</label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-end-0"><i class="fas fa-lock text-muted"></i></span>
-                                    <input type="password" name="password" class="form-control border-start-0 bg-light" required placeholder="••••••••">
+                                    <input type="password" name="password" id="passwordLogin" class="form-control border-start-0 border-end-0 bg-light" required placeholder="••••••••">
+                                    <button type="button" class="input-group-text bg-light border-start-0" id="togglePassword" tabindex="-1">
+                                        <i class="fas fa-eye text-muted" id="eyeIcon"></i>
+                                    </button>
                                 </div>
                             </div>
                             <button type="submit" name="login" class="btn btn-sage w-100 fw-bold py-2 rounded-pill shadow-sm">Masuk</button>
@@ -106,6 +109,19 @@ if (isset($_POST['login'])) {
             </div>
         </div>
     </div>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const toggleBtn = document.getElementById('togglePassword');
+        const passInput = document.getElementById('passwordLogin');
+        const eyeIcon  = document.getElementById('eyeIcon');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function() {
+                const isPass = passInput.type === 'password';
+                passInput.type = isPass ? 'text' : 'password';
+                eyeIcon.classList.toggle('fa-eye', !isPass);
+                eyeIcon.classList.toggle('fa-eye-slash', isPass);
+            });
+        }
+    </script>
 </body>
 </html>

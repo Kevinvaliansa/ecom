@@ -5,10 +5,11 @@ require_once 'backend/config/database.php';
 // Logika Tambah ke Wishlist
 if (isset($_GET['add_wishlist'])) {
     if (!isset($_SESSION['user_id'])) {
-        echo "<script>alert('Silakan login dulu untuk menyimpan ke Wishlist!'); window.location.href='login.php';</script>";
+        $_SESSION['toast'] = ['type' => 'error', 'message' => 'Silakan login dulu untuk menyimpan ke Wishlist!'];
+        header("Location: login.php");
         exit;
     }
-    $id_produk = $_GET['add_wishlist'];
+    $id_produk = (int)$_GET['add_wishlist'];
     $id_user = $_SESSION['user_id'];
     $cek_wishlist = $conn->prepare("SELECT * FROM wishlist WHERE id_user = ? AND id_produk = ?");
     $cek_wishlist->execute([$id_user, $id_produk]);
@@ -16,8 +17,12 @@ if (isset($_GET['add_wishlist'])) {
     if ($cek_wishlist->rowCount() == 0) {
         $insert = $conn->prepare("INSERT INTO wishlist (id_user, id_produk) VALUES (?, ?)");
         $insert->execute([$id_user, $id_produk]);
+        $_SESSION['toast'] = ['type' => 'success', 'message' => 'Produk ditambahkan ke Wishlist!'];
+    } else {
+        $_SESSION['toast'] = ['type' => 'warning', 'message' => 'Produk sudah ada di Wishlist.'];
     }
-    header("Location: index.php#produk-terbaru");
+    $redirect = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : 'index.php';
+    header("Location: $redirect");
     exit;
 }
 
@@ -51,88 +56,75 @@ $produk_list = $stmt->fetchAll();
     <title>Xriva Eyewear - Asisten Belanja AI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="frontend/css/style.css">
+    <link rel="stylesheet" href="frontend/css/style.css?v=<?= time() ?>">
     <style>
-        :root { --sage: #4a7c6b; --sage-light: #f4f7f6; --sage-primary: #7cb3a1; }
-        body { background-color: var(--sage-light); font-family: 'Segoe UI', sans-serif; }
-        .navbar-sage { background-color: var(--sage); }
-        .btn-sage { background-color: var(--sage-primary); color: white; border: none; }
-        .btn-sage:hover { background-color: var(--sage); color: white; }
-        
-        /* Efek Abu-abu untuk stok habis */
-        .img-out-of-stock { filter: grayscale(100%); opacity: 0.6; } 
-        
-        /* Kategori Pill */
+        /* small compatibility utilities kept inline */
+        .img-out-of-stock { filter: grayscale(100%); opacity: 0.6; }
         .category-pill { border-radius: 20px; padding: 6px 22px; text-decoration: none; color: #555; background: white; border: 1px solid #ddd; transition: 0.3s; font-weight: 500; white-space: nowrap; }
-        .category-pill.active, .category-pill:hover { background: var(--sage); color: white; border-color: var(--sage); }
-
+        .category-pill.active, .category-pill:hover { background: var(--xriva-primary); color: white; border-color: var(--xriva-primary); }
         .kategori-scroll::-webkit-scrollbar { height: 6px; }
         .kategori-scroll::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
     </style>
 </head>
 <body class="bg-light">
-
-    <nav class="navbar navbar-expand-lg navbar-dark navbar-sage sticky-top shadow-sm py-2">
-        <div class="container">
-            <a class="navbar-brand fw-bold fs-4" href="index.php"><i class="fas fa-glasses me-2"></i> Xriva Eyewear</a>
-            
-            <form class="d-flex mx-auto d-none d-lg-flex" style="max-width: 450px; width: 100%;" action="index.php" method="GET">
-                <div class="input-group">
-                    <input class="form-control border-0 shadow-sm" type="search" name="cari" placeholder="Cari kacamata gaya, minus..." aria-label="Search" style="border-radius: 20px 0 0 20px;">
-                    <button class="btn bg-white border-0 shadow-sm text-muted" type="submit" style="border-radius: 0 20px 20px 0;"><i class="fas fa-search"></i></button>
-                </div>
-            </form>
-
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-center gap-3 mt-3 mt-lg-0">
-                    <li class="nav-item"><a class="nav-link active fw-bold d-flex align-items-center" href="index.php">Home</a></li>
-                    <li class="nav-item"><a class="nav-link d-flex align-items-center" href="wishlist.php"><i class="fas fa-heart me-1"></i> Wishlist</a></li>
-                    <li class="nav-item"><a class="nav-link d-flex align-items-center" href="cart.php"><i class="fas fa-shopping-cart me-1"></i> Keranjang</a></li>
-                    <li class="nav-item"><a class="nav-link d-flex align-items-center" href="history.php"><i class="fas fa-history me-1"></i> Pesanan</a></li>
-                    
-                    <?php if(isset($_SESSION['user_id'])): ?>
-                        <li class="nav-item dropdown ms-lg-2 d-flex align-items-center border-start-lg ps-lg-3 mt-2 mt-lg-0">
-                            <div class="rounded-circle d-flex justify-content-center align-items-center bg-white text-dark fw-bold me-2 shadow-sm" style="width: 35px; height: 35px; font-size: 1rem;">
-                                <?= strtoupper(substr($_SESSION['user_nama'], 0, 1)) ?>
-                            </div>
-                            <a class="nav-link dropdown-toggle fw-bold text-white p-0" href="#" data-bs-toggle="dropdown">
-                                <?= htmlspecialchars($_SESSION['user_nama']) ?>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end mt-3 shadow border-0" style="border-radius: 12px;">
-                                <?php if(isset($_SESSION['role']) && $_SESSION['role'] == 'admin'): ?>
-                                    <li><a class="dropdown-item py-2 fw-bold" href="admin/produk.php" style="color: var(--sage);"><i class="fas fa-user-shield me-2"></i> Dashboard Admin</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                <?php endif; ?>
-                                <li><a class="dropdown-item py-2" href="profile.php"><i class="fas fa-user-circle text-muted me-2"></i> Profil Saya</a></li>
-                                <li><a class="dropdown-item py-2" href="history.php"><i class="fas fa-clipboard-list text-muted me-2"></i> Pesanan Saya</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger py-2" href="logout.php"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
-                            </ul>
-                        </li>
-                    <?php else: ?>
-                        <li class="nav-item ms-lg-2 mt-2 mt-lg-0 d-flex align-items-center">
-                            <a href="login.php" class="btn btn-light text-dark fw-bold rounded-pill px-4 shadow-sm">Login</a>
-                        </li>
-                    <?php endif; ?>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <?php include 'frontend/includes/navbar.php'; ?>
 
     <header class="py-5 mb-5" style="background: linear-gradient(135deg, #f8f9fa 0%, #cad2c5 100%); border-bottom: 1px solid #dee2e6;">
         <div class="container py-4 text-center">
             <h1 class="fw-bold text-dark mb-3" style="letter-spacing: -0.5px;">Koleksi Kacamata Terbaikmu</h1>
-            <p class="lead text-secondary mb-4" style="max-width: 600px; margin: 0 auto;">Desain trendi, perlindungan UV maksimal, dan harga yang pas di kantong. Tanyakan asisten AI kami untuk rekomendasi!</p>
-            <a href="#produk-terbaru" class="btn btn-sage btn-lg px-5 fw-bold shadow-sm rounded-pill">Mulai Belanja</a>
+            <p class="lead text-secondary mb-4" style="max-width: 600px; margin: 0 auto;">Desain trendi, perlindungan UV maksimal, dan harga yang pas di kantong.</p>
+
+            <!-- Search Bar -->
+            <form action="index.php" method="GET" class="d-flex justify-content-center" id="form-search">
+                <?php if ($kategori_filter): ?>
+                    <input type="hidden" name="kategori" value="<?= htmlspecialchars($kategori_filter) ?>">
+                <?php endif; ?>
+                <div class="input-group shadow-sm" style="max-width: 520px; border-radius: 50px; overflow: hidden;">
+                    <span class="input-group-text bg-white border-0 ps-4">
+                        <i class="fas fa-search text-muted"></i>
+                    </span>
+                    <input type="text" name="cari" id="searchInput"
+                           class="form-control border-0 py-3"
+                           placeholder="Cari produk... (e.g. kacamata minus)"
+                           value="<?= htmlspecialchars($cari) ?>"
+                           autocomplete="off">
+                    <?php if ($cari): ?>
+                    <a href="index.php<?= $kategori_filter ? '?kategori=' . urlencode($kategori_filter) : '' ?>" 
+                       class="input-group-text bg-white border-0 text-muted pe-3" title="Hapus pencarian">
+                        <i class="fas fa-times"></i>
+                    </a>
+                    <?php endif; ?>
+                    <button type="submit" class="btn btn-sage px-4 fw-bold" style="border-radius: 0 50px 50px 0;">
+                        Cari
+                    </button>
+                </div>
+            </form>
+            <p class="text-muted small mt-3 mb-0" style="opacity:0.7;">
+                <i class="fas fa-tag me-1"></i> Temukan dari <strong><?= count($produk_list) ?>+</strong> koleksi kacamata pilihan
+            </p>
         </div>
     </header>
 
     <section id="produk-terbaru" class="container my-5 pb-5">
         
+        <!-- Info hasil pencarian / filter -->
+        <?php if ($cari || $kategori_filter): ?>
+        <div class="d-flex align-items-center justify-content-between mb-3 px-1">
+            <span class="text-muted small">
+                <?php if ($cari): ?>
+                    Hasil pencarian untuk <strong class="text-dark">"<?= htmlspecialchars($cari) ?>"</strong>
+                    <?php if ($kategori_filter): ?> di kategori <strong class="text-dark"><?= htmlspecialchars($kategori_filter) ?></strong><?php endif; ?>
+                <?php else: ?>
+                    Kategori: <strong class="text-dark"><?= htmlspecialchars($kategori_filter) ?></strong>
+                <?php endif; ?>
+                &nbsp;(<?= count($produk_list) ?> produk)
+            </span>
+            <a href="index.php" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                <i class="fas fa-times me-1"></i> Reset
+            </a>
+        </div>
+        <?php endif; ?>
+
         <div class="d-flex justify-content-center gap-3 overflow-auto pb-3 mb-4 kategori-scroll">
             <a href="index.php" class="category-pill <?= !$kategori_filter ? 'active' : '' ?>">Semua Koleksi</a>
             <a href="index.php?kategori=Kacamata Gaya" class="category-pill <?= $kategori_filter == 'Kacamata Gaya' ? 'active' : '' ?>">Kacamata Gaya</a>
@@ -144,42 +136,34 @@ $produk_list = $stmt->fetchAll();
             <?php if(count($produk_list) > 0): ?>
                 <?php foreach($produk_list as $p): ?>
                 <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                    <div class="card h-100 shadow-sm border-0 position-relative bg-white" style="border-radius: 16px; overflow: hidden;">
-                        <a href="index.php?add_wishlist=<?= $p['id'] ?>" class="btn btn-light text-danger position-absolute rounded-circle shadow-sm" style="top: 10px; right: 10px; width: 35px; height: 35px; padding: 5px; z-index: 2;" title="Simpan ke Wishlist">
-                            <i class="far fa-heart mt-1"></i>
+                    <div class="product-card">
+                        <a href="index.php?add_wishlist=<?= $p['id'] ?>" class="btn btn-light text-danger position-absolute rounded-circle shadow-sm" style="top: 10px; right: 10px; width: 35px; height: 35px; padding: 0; z-index: 10; display: flex; align-items: center; justify-content: center;" title="Simpan ke Wishlist">
+                            <i class="far fa-heart"></i>
                         </a>
-                        
-                        <a href="detail.php?id=<?= $p['id'] ?>">
-                            <img src="frontend/images/produk/<?= htmlspecialchars($p['gambar']) ?>" 
-                                 class="card-img-top <?= ($p['stok'] <= 0) ? 'img-out-of-stock' : '' ?>" 
-                                 style="height: 220px; object-fit: cover;">
-                        </a>
-                        
-                        <div class="card-body d-flex flex-column p-4">
-                            <span class="badge bg-light text-muted border mb-2 align-self-start"><?= htmlspecialchars($p['kategori'] ?? 'Kacamata') ?></span>
-                            <h6 class="card-title fw-bold text-dark text-truncate mb-1"><?= htmlspecialchars($p['nama_produk']) ?></h6>
-                            <h5 class="card-text fw-bold mb-2" style="color: var(--sage);">Rp <?= number_format($p['harga'], 0, ',', '.') ?></h5>
+
+                        <div class="img-wrap">
+                            <a href="detail.php?id=<?= $p['id'] ?>">
+                                <img src="frontend/images/produk/<?= htmlspecialchars($p['gambar']) ?>" 
+                                    class="<?= ($p['stok'] <= 0) ? 'img-out-of-stock' : '' ?>" 
+                                    alt="<?= htmlspecialchars($p['nama_produk']) ?>">
+                            </a>
+                        </div>
+
+                        <div class="product-info">
+                            <span class="category"><?= htmlspecialchars($p['kategori'] ?? 'Kacamata') ?></span>
+                            <a href="detail.php?id=<?= $p['id'] ?>" class="text-decoration-none">
+                                <h6 class="product-name"><?= htmlspecialchars($p['nama_produk']) ?></h6>
+                            </a>
                             
-                            <?php if($p['stok'] > 0): ?>
-                                <small class="text-muted mb-4"><i class="fas fa-box-open me-1"></i> Sisa <?= $p['stok'] ?> Pcs</small>
-                            <?php else: ?>
-                                <small class="text-danger fw-bold mb-4"><i class="fas fa-times-circle me-1"></i> Stok Habis</small>
-                            <?php endif; ?>
-                            
-                            <div class="mt-auto">
-                                <form action="cart.php" method="POST" class="w-100">
-                                    <input type="hidden" name="id_produk" value="<?= $p['id'] ?>">
-                                    <div class="row g-2 align-items-center">
-                                        <div class="col-4">
-                                            <input type="number" name="qty" class="form-control text-center fw-bold" value="1" min="1" max="<?= $p['stok'] ?>" <?= ($p['stok'] <= 0) ? 'disabled' : '' ?> style="border-radius: 8px;">
-                                        </div>
-                                        <div class="col-8">
-                                            <button type="submit" name="add_to_cart" class="btn btn-sage w-100 fw-bold" style="border-radius: 8px;" <?= ($p['stok'] <= 0) ? 'disabled' : '' ?>>
-                                                <?= ($p['stok'] <= 0) ? 'Habis' : '+ Keranjang' ?>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </form>
+                            <div class="d-flex justify-content-between align-items-center mt-auto">
+                                <div class="product-price">Rp <?= number_format($p['harga'], 0, ',', '.') ?></div>
+                                <?php if($p['stok'] > 0): ?>
+                                    <a href="cart.php?add_to_cart=<?= $p['id'] ?>&qty=1" class="btn-tambah">
+                                        <i class="fas fa-plus me-1"></i> Tambah
+                                    </a>
+                                <?php else: ?>
+                                    <span class="badge bg-danger">Habis</span>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -194,7 +178,7 @@ $produk_list = $stmt->fetchAll();
         </div>
     </section>
 
-    <footer class="text-white text-center py-4 mt-5" style="background-color: var(--sage);">
+    <footer class="text-white text-center py-4 mt-5" style="background-color: var(--xriva-dark);">
         <div class="container">
             <h5 class="fw-bold mb-2"><i class="fas fa-glasses"></i> Xriva Eyewear</h5>
             <p class="mb-2 small">&copy; <?= date('Y') ?> Xriva Eyewear. All Rights Reserved.</p>
@@ -205,16 +189,16 @@ $produk_list = $stmt->fetchAll();
 
     <style>
         #chatbot-container { position: fixed !important; bottom: 100px !important; right: 30px !important; width: 360px !important; height: 500px !important; background-color: #ffffff !important; border-radius: 16px !important; display: none; flex-direction: column !important; box-shadow: 0 15px 35px rgba(0,0,0,0.2) !important; z-index: 99999 !important; border: 1px solid #e0e0e0 !important; overflow: hidden !important; }
-        .chatbot-header { background-color: var(--sage) !important; color: white !important; padding: 15px 20px !important; font-weight: bold !important; display: flex !important; justify-content: space-between !important; align-items: center !important; }
+        .chatbot-header { background-color: var(--xriva-dark) !important; color: white !important; padding: 15px 20px !important; font-weight: bold !important; display: flex !important; justify-content: space-between !important; align-items: center !important; }
         .chat-body { flex: 1 !important; padding: 15px !important; overflow-y: auto !important; background-color: #f8f9fa !important; display: flex !important; flex-direction: column !important; gap: 12px !important; }
         .bot-message { background-color: #e9ecef !important; color: #333 !important; padding: 10px 15px !important; border-radius: 15px 15px 15px 5px !important; max-width: 85% !important; font-size: 0.9rem !important; align-self: flex-start !important; }
-        .user-message { background-color: var(--sage-primary) !important; color: white !important; padding: 10px 15px !important; border-radius: 15px 15px 5px 15px !important; max-width: 85% !important; font-size: 0.9rem !important; align-self: flex-end !important; }
+        .user-message { background-color: var(--xriva-primary) !important; color: white !important; padding: 10px 15px !important; border-radius: 15px 15px 5px 15px !important; max-width: 85% !important; font-size: 0.9rem !important; align-self: flex-end !important; }
         .chat-suggestions { display: flex !important; flex-wrap: wrap !important; gap: 8px !important; margin-top: 10px !important; }
-        .btn-suggestion { font-size: 0.8rem !important; padding: 6px 12px !important; border-radius: 20px !important; border: 1px solid var(--sage-primary) !important; background: white !important; color: var(--sage) !important; cursor: pointer !important; transition: 0.2s !important; }
-        .btn-suggestion:hover { background: var(--sage-primary) !important; color: white !important; }
+        .btn-suggestion { font-size: 0.8rem !important; padding: 6px 12px !important; border-radius: 20px !important; border: 1px solid var(--xriva-primary) !important; background: white !important; color: var(--xriva-dark) !important; cursor: pointer !important; transition: 0.2s !important; }
+        .btn-suggestion:hover { background: var(--xriva-primary) !important; color: white !important; }
         .chat-input-area { display: flex !important; padding: 15px !important; background: white !important; border-top: 1px solid #eee !important; gap: 10px !important; }
         .chat-input-area input { flex: 1 !important; border: 1px solid #ddd !important; border-radius: 20px !important; padding: 8px 15px !important; outline: none !important; }
-        #chatbot-toggle { position: fixed !important; bottom: 30px !important; right: 30px !important; width: 60px !important; height: 60px !important; border-radius: 50% !important; border: none !important; background-color: var(--sage) !important; color: white !important; box-shadow: 0 5px 15px rgba(0,0,0,0.2) !important; cursor: pointer !important; z-index: 99999 !important; display: flex !important; align-items: center !important; justify-content: center !important; transition: 0.3s; }
+        #chatbot-toggle { position: fixed !important; bottom: 30px !important; right: 30px !important; width: 60px !important; height: 60px !important; border-radius: 50% !important; border: none !important; background-color: var(--xriva-dark) !important; color: white !important; box-shadow: 0 5px 15px rgba(0,0,0,0.2) !important; cursor: pointer !important; z-index: 99999 !important; display: flex !important; align-items: center !important; justify-content: center !important; transition: 0.3s; }
         #chatbot-toggle:hover { transform: scale(1.1); }
     </style>
 
@@ -306,7 +290,25 @@ $produk_list = $stmt->fetchAll();
         document.getElementById('chat-input-field').onkeypress = (e) => { 
             if(e.key === 'Enter') sendMessage(); 
         };
-        document.getElementById('chat-send-btn').onclick = sendMessage;
+        document.getElementById('chatbot-send-btn') && (document.getElementById('chat-send-btn').onclick = sendMessage);
+    </script>
+
+    <script>
+        // ===== ANIMATED SEARCH PLACEHOLDER =====
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput && !searchInput.value) {
+            const hints = [
+                'Cari kacamata minus...',
+                'Cari kacamata gaya...',
+                'Cari aksesoris & kotak...',
+                'Cari kacamata baca...'
+            ];
+            let hi = 0;
+            setInterval(() => {
+                hi = (hi + 1) % hints.length;
+                searchInput.setAttribute('placeholder', hints[hi]);
+            }, 2200);
+        }
     </script>
 </body>
 </html>

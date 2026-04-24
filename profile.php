@@ -46,6 +46,33 @@ if (isset($_POST['update_profile'])) {
     }
 }
 
+// PROSES UPDATE PASSWORD
+if (isset($_POST['update_password'])) {
+    $old_pass = $_POST['old_password'];
+    $new_pass = $_POST['new_password'];
+    $confirm_pass = $_POST['confirm_password'];
+
+    $stmt_pass = $conn->prepare("SELECT password FROM users WHERE id = ?");
+    $stmt_pass->execute([$id_user]);
+    $user_data = $stmt_pass->fetch();
+
+    if (password_verify($old_pass, $user_data['password']) || $old_pass == $user_data['password']) {
+        if ($new_pass === $confirm_pass) {
+            $hashed_pass = password_hash($new_pass, PASSWORD_DEFAULT);
+            $update_pass = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
+            if ($update_pass->execute([$hashed_pass, $id_user])) {
+                $pesan_sukses = "Password berhasil diperbarui!";
+            } else {
+                $pesan_error = "Terjadi kesalahan saat menyimpan password baru.";
+            }
+        } else {
+            $pesan_error = "Konfirmasi password baru tidak cocok!";
+        }
+    } else {
+        $pesan_error = "Password saat ini salah!";
+    }
+}
+
 // PROSES UPDATE ALAMAT SAJA (Modal)
 if (isset($_POST['update_alamat_saja'])) {
     $alamat_baru = $_POST['alamat_baru'];
@@ -90,43 +117,7 @@ if (!empty($user['foto']) && file_exists("frontend/images/profil/" . $user['foto
 </head>
 <body class="bg-light">
 
-<nav class="navbar navbar-expand-lg navbar-dark navbar-sage sticky-top shadow-sm py-2">
-    <div class="container">
-        <a class="navbar-brand fw-bold fs-4" href="index.php"><i class="fas fa-leaf"></i> XrivaStore</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto align-items-center gap-3">
-                <li class="nav-item"><a class="nav-link" href="index.php">Home</a></li>
-                <li class="nav-item"><a class="nav-link" href="wishlist.php"><i class="fas fa-heart me-1"></i> Wishlist</a></li>
-                <li class="nav-item"><a class="nav-link" href="cart.php"><i class="fas fa-shopping-cart me-1"></i> Keranjang</a></li>
-                <li class="nav-item"><a class="nav-link" href="history.php"><i class="fas fa-history me-1"></i> Pesanan</a></li>
-                
-                <li class="nav-item dropdown ms-2 d-flex align-items-center border-start ps-3">
-                    <div class="rounded-circle d-flex justify-content-center align-items-center bg-white text-sage-dark fw-bold me-2 shadow-sm" style="width: 35px; height: 35px;">
-                        <?= $inisial ?>
-                    </div>
-                    <a class="nav-link dropdown-toggle fw-bold text-white p-0" href="#" data-bs-toggle="dropdown">
-                        <?= htmlspecialchars($_SESSION['user_nama']) ?>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end mt-3 shadow border-0" style="border-radius: 12px;">
-                        
-                        <?php if(isset($_SESSION['role']) && $_SESSION['role'] == 'admin'): ?>
-                            <li><a class="dropdown-item py-2 fw-bold text-sage-dark" href="admin/produk.php"><i class="fas fa-user-shield me-2"></i> Dashboard Admin</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                        <?php endif; ?>
-
-                        <li><a class="dropdown-item py-2" href="profile.php"><i class="fas fa-user-circle text-muted me-2"></i> Profil Saya</a></li>
-                        <li><a class="dropdown-item py-2" href="history.php"><i class="fas fa-clipboard-list text-muted me-2"></i> Pesanan Saya</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger py-2" href="logout.php"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-    </div>
-</nav>
+<?php include 'frontend/includes/navbar.php'; ?>
 
 <div class="container my-5 pb-5">
     <div class="row">
@@ -147,10 +138,8 @@ if (!empty($user['foto']) && file_exists("frontend/images/profil/" . $user['foto
                 <div class="ms-4 mb-4">
                     <a class="d-block text-sage-dark text-decoration-none mb-2 fw-bold menu-tab active-tab" data-target="profil">Profil</a>
                     <a class="d-block text-muted text-decoration-none mb-2 menu-tab" data-target="alamat">Alamat</a>
+                    <a class="d-block text-muted text-decoration-none mb-2 menu-tab" data-target="password">Ubah Password</a>
                 </div>
-                <a href="history.php" class="d-flex align-items-center text-muted text-decoration-none mb-3">
-                    <i class="fas fa-clipboard-list me-3" style="color: #4a7c6b;"></i> Pesanan Saya
-                </a>
             </div>
         </div>
 
@@ -219,6 +208,27 @@ if (!empty($user['foto']) && file_exists("frontend/images/profil/" . $user['foto
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <div id="pane-password" class="content-pane" style="display: none;">
+                        <h5 class="fw-bold mb-1 text-sage-dark">Ubah Password</h5>
+                        <p class="text-muted small mb-4 pb-3 border-bottom">Demi keamanan, pastikan password Anda kuat dan tidak mudah ditebak oleh orang lain.</p>
+                        
+                        <form method="POST" class="w-100" style="max-width: 500px;">
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-bold">Password Saat Ini</label>
+                                <input type="password" name="old_password" class="form-control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-bold">Password Baru</label>
+                                <input type="password" name="new_password" class="form-control" required minlength="6">
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label text-muted small fw-bold">Konfirmasi Password Baru</label>
+                                <input type="password" name="confirm_password" class="form-control" required minlength="6">
+                            </div>
+                            <button type="submit" name="update_password" class="btn btn-sage px-4 py-2 fw-bold rounded-pill">Simpan Password Baru</button>
+                        </form>
                     </div>
 
                 </div>
