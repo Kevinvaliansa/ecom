@@ -31,17 +31,32 @@ $kategori_filter = $_GET['kategori'] ?? '';
 $cari = $_GET['cari'] ?? '';
 
 $query = "SELECT * FROM produk WHERE 1=1";
+$queryCount = "SELECT COUNT(*) FROM produk WHERE 1=1";
 $params = [];
 
 if ($kategori_filter) {
     $query .= " AND kategori = ?";
+    $queryCount .= " AND kategori = ?";
     $params[] = $kategori_filter;
 }
 if ($cari) {
     $query .= " AND nama_produk LIKE ?";
+    $queryCount .= " AND nama_produk LIKE ?";
     $params[] = "%$cari%";
 }
-$query .= " ORDER BY id DESC";
+
+// Hitung Pagination
+$stmtCount = $conn->prepare($queryCount);
+$stmtCount->execute($params);
+$total_data = $stmtCount->fetchColumn();
+
+$limit = 8;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) $page = 1;
+$offset = ($page - 1) * $limit;
+$total_pages = ceil($total_data / $limit);
+
+$query .= " ORDER BY id DESC LIMIT $limit OFFSET $offset";
 
 $stmt = $conn->prepare($query);
 $stmt->execute($params);
@@ -117,7 +132,7 @@ $produk_list = $stmt->fetchAll();
                 <?php else: ?>
                     Kategori: <strong class="text-dark"><?= htmlspecialchars($kategori_filter) ?></strong>
                 <?php endif; ?>
-                &nbsp;(<?= count($produk_list) ?> produk)
+                &nbsp;(Menampilkan <?= count($produk_list) ?> dari total <?= $total_data ?> produk)
             </span>
             <a href="index.php" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
                 <i class="fas fa-times me-1"></i> Reset
@@ -156,7 +171,12 @@ $produk_list = $stmt->fetchAll();
                             </a>
                             
                             <div class="d-flex justify-content-between align-items-center mt-auto">
-                                <div class="product-price">Rp <?= number_format($p['harga'], 0, ',', '.') ?></div>
+                                <div class="product-price">
+                                    <?php if(isset($p['harga_coret']) && $p['harga_coret'] > 0): ?>
+                                        <div class="text-muted text-decoration-line-through" style="font-size: 0.75rem;">Rp <?= number_format($p['harga_coret'], 0, ',', '.') ?></div>
+                                    <?php endif; ?>
+                                    Rp <?= number_format($p['harga'], 0, ',', '.') ?>
+                                </div>
                                 <?php if($p['stok'] > 0): ?>
                                     <a href="cart.php?add_to_cart=<?= $p['id'] ?>&qty=1" class="btn-tambah">
                                         <i class="fas fa-plus me-1"></i> Tambah
@@ -176,6 +196,35 @@ $produk_list = $stmt->fetchAll();
                 </div>
             <?php endif; ?>
         </div>
+        
+        <!-- Pagination -->
+        <?php if($total_pages > 1): ?>
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                <?php
+                // Buat query string untuk link pagination agar filter tetap jalan
+                $qargs = $_GET;
+                unset($qargs['page']);
+                $qstr = http_build_query($qargs);
+                $link_prefix = "index.php?" . ($qstr ? $qstr . "&" : "");
+                ?>
+                
+                <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
+                    <a class="page-link text-sage-dark border-0 shadow-sm rounded-pill px-3 me-2" href="<?= $link_prefix ?>page=<?= $page - 1 ?>"><i class="fas fa-chevron-left me-1"></i> Prev</a>
+                </li>
+                
+                <?php for($i = 1; $i <= $total_pages; $i++): ?>
+                <li class="page-item <?= ($page == $i) ? 'active' : '' ?>">
+                    <a class="page-link <?= ($page == $i) ? 'bg-sage border-sage text-white' : 'text-sage-dark' ?> border-0 shadow-sm rounded-circle mx-1" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;" href="<?= $link_prefix ?>page=<?= $i ?>"><?= $i ?></a>
+                </li>
+                <?php endfor; ?>
+                
+                <li class="page-item <?= ($page >= $total_pages) ? 'disabled' : '' ?>">
+                    <a class="page-link text-sage-dark border-0 shadow-sm rounded-pill px-3 ms-2" href="<?= $link_prefix ?>page=<?= $page + 1 ?>">Next <i class="fas fa-chevron-right ms-1"></i></a>
+                </li>
+            </ul>
+        </nav>
+        <?php endif; ?>
     </section>
 
     <footer class="text-white text-center py-4 mt-5" style="background-color: var(--xriva-dark);">
@@ -209,11 +258,21 @@ $produk_list = $stmt->fetchAll();
         </div>
         <div class="chat-body" id="chat-body">
             <div class="bot-message">
-                Halo! Saya Asisten Belanja Xriva Eyewear. Ada yang bisa saya bantu mencari kacamata hari ini?
+                <?php 
+                $nama_panggilan = isset($_SESSION['user_nama']) ? explode(' ', $_SESSION['user_nama'])[0] : '';
+                if ($nama_panggilan) {
+                    echo "Halo kak <b>$nama_panggilan</b>! 👋 Saya Asisten Xriva. Mau cek pesanan atau cari kacamata baru hari ini?";
+                } else {
+                    echo "Halo! 👋 Saya Asisten Belanja Xriva. Ada yang bisa saya bantu mencari kacamata hari ini?";
+                }
+                ?>
                 <div class="chat-suggestions">
+                    <?php if(isset($_SESSION['user_id'])): ?>
+                    <button class="btn-suggestion" onclick="sendQuickReply('Cek status pesanan saya')"><i class="fas fa-box me-1"></i> Cek Pesanan</button>
+                    <button class="btn-suggestion" onclick="sendQuickReply('Apa isi keranjang saya')"><i class="fas fa-shopping-cart me-1"></i> Cek Keranjang</button>
+                    <?php endif; ?>
                     <button class="btn-suggestion" onclick="sendQuickReply('Rekomendasi kacamata minus')">Kacamata Minus</button>
                     <button class="btn-suggestion" onclick="sendQuickReply('Kacamata gaya untuk jalan-jalan')">Kacamata Gaya</button>
-                    <button class="btn-suggestion" onclick="sendQuickReply('Cara pembayaran')">Cara Pembayaran</button>
                 </div>
             </div>
         </div>
@@ -265,13 +324,20 @@ $produk_list = $stmt->fetchAll();
         function typeWriter(text, elementId) {
             const element = document.getElementById(elementId);
             let i = 0;
+            let currentHTML = "";
             function type() {
                 if (i < text.length) {
                     if (text.charAt(i) === '<') {
                         let tag = "";
                         while (text.charAt(i) !== '>' && i < text.length) { tag += text.charAt(i); i++; }
-                        tag += '>'; element.innerHTML += tag; i++;
-                    } else { element.innerHTML += text.charAt(i); i++; }
+                        tag += '>'; 
+                        currentHTML += tag; 
+                        i++;
+                    } else { 
+                        currentHTML += text.charAt(i); 
+                        i++; 
+                    }
+                    element.innerHTML = currentHTML;
                     setTimeout(type, 15); 
                     document.getElementById('chat-body').scrollTop = document.getElementById('chat-body').scrollHeight;
                 }

@@ -75,6 +75,9 @@ $inisial = isset($_SESSION['user_nama']) ? strtoupper(substr($_SESSION['user_nam
         <div class="col-md-6">
             <div class="ps-md-4">
                 <h2 class="fw-bold text-dark mb-2"><?= htmlspecialchars($p['nama_produk']) ?></h2>
+                <?php if(isset($p['harga_coret']) && $p['harga_coret'] > 0): ?>
+                    <h5 class="text-muted text-decoration-line-through mb-1">Rp <?= number_format($p['harga_coret'], 0, ',', '.') ?></h5>
+                <?php endif; ?>
                 <h3 class="text-sage-dark fw-bold mb-4">Rp <?= number_format($p['harga'], 0, ',', '.') ?></h3>
                 
                 <hr class="my-4 opacity-50">

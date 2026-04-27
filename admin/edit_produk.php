@@ -13,17 +13,18 @@ if (isset($_POST['edit_produk'])) {
     $nama      = trim($_POST['nama_produk']);
     $kategori  = $_POST['kategori'];
     $harga     = (int)$_POST['harga'];
+    $harga_coret = (int)($_POST['harga_coret'] ?? 0);
     $stok      = (int)$_POST['stok'];
     $deskripsi = trim($_POST['deskripsi']);
 
     if (!empty($_FILES['gambar']['name'])) {
         $gambar_baru = time() . '_' . basename($_FILES['gambar']['name']);
         move_uploaded_file($_FILES['gambar']['tmp_name'], '../frontend/images/produk/' . $gambar_baru);
-        $conn->prepare("UPDATE produk SET nama_produk=?,kategori=?,harga=?,stok=?,deskripsi=?,gambar=? WHERE id=?")
-             ->execute([$nama, $kategori, $harga, $stok, $deskripsi, $gambar_baru, $id_edit]);
+        $conn->prepare("UPDATE produk SET nama_produk=?,kategori=?,harga=?,harga_coret=?,stok=?,deskripsi=?,gambar=? WHERE id=?")
+             ->execute([$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $gambar_baru, $id_edit]);
     } else {
-        $conn->prepare("UPDATE produk SET nama_produk=?,kategori=?,harga=?,stok=?,deskripsi=? WHERE id=?")
-             ->execute([$nama, $kategori, $harga, $stok, $deskripsi, $id_edit]);
+        $conn->prepare("UPDATE produk SET nama_produk=?,kategori=?,harga=?,harga_coret=?,stok=?,deskripsi=? WHERE id=?")
+             ->execute([$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $id_edit]);
     }
     header("Location: produk.php?updated=1"); exit;
 }
@@ -88,7 +89,7 @@ $active_page = 'produk';
                                        value="<?= htmlspecialchars($p['nama_produk']) ?>" required>
                             </div>
                             <div class="row g-3 mb-3">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label">Kategori <span class="text-danger">*</span></label>
                                     <select name="kategori" class="form-select" required>
                                         <?php
@@ -98,11 +99,18 @@ $active_page = 'produk';
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label">Harga Jual <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-light">Rp</span>
                                         <input type="number" name="harga" class="form-control" value="<?= $p['harga'] ?>" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Harga Coret</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light">Rp</span>
+                                        <input type="number" name="harga_coret" class="form-control" value="<?= htmlspecialchars($p['harga_coret'] ?? 0) ?>" min="0">
                                     </div>
                                 </div>
                             </div>

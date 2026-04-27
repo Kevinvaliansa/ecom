@@ -16,19 +16,25 @@ if (isset($_POST['register'])) {
     $no_hp   = htmlspecialchars(trim($_POST['no_hp']));
     $alamat  = htmlspecialchars(trim($_POST['alamat']));
 
+    $username = htmlspecialchars(trim($_POST['username']));
+
     // Validasi password minimal 6 karakter
     if (strlen($password) < 6) {
         $error = "Password minimal 6 karakter.";
+    } elseif (strlen($username) < 3) {
+        $error = "Username minimal 3 karakter.";
+    } elseif (!preg_match('/^[a-zA-Z0-9_]+$/', $username)) {
+        $error = "Username hanya boleh berisi huruf, angka, dan underscore.";
     } else {
-        $cek_email = $conn->prepare("SELECT email FROM users WHERE email = ?");
-        $cek_email->execute([$email]);
+        $cek_email = $conn->prepare("SELECT email FROM users WHERE email = ? OR username = ?");
+        $cek_email->execute([$email, $username]);
 
         if ($cek_email->rowCount() > 0) {
-            $error = "Email sudah terdaftar, silakan gunakan email lain.";
+            $error = "Email atau Username sudah terdaftar.";
         } else {
             $hashed = password_hash($password, PASSWORD_DEFAULT);
-            $stmt   = $conn->prepare("INSERT INTO users (nama, email, password, no_hp, alamat) VALUES (?, ?, ?, ?, ?)");
-            if ($stmt->execute([$nama, $email, $hashed, $no_hp, $alamat])) {
+            $stmt   = $conn->prepare("INSERT INTO users (nama, username, email, password, no_hp, alamat) VALUES (?, ?, ?, ?, ?, ?)");
+            if ($stmt->execute([$nama, $username, $email, $hashed, $no_hp, $alamat])) {
                 $sukses = "Registrasi berhasil!";
             } else {
                 $error = "Terjadi kesalahan saat mendaftar.";
@@ -77,9 +83,18 @@ if (isset($_POST['register'])) {
                         <div class="mb-3">
                             <label class="form-label fw-bold text-muted small">Nama Lengkap</label>
                             <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0"><i class="fas fa-user text-muted"></i></span>
+                                <span class="input-group-text bg-light border-end-0"><i class="fas fa-id-card text-muted"></i></span>
                                 <input type="text" name="nama" class="form-control border-start-0 bg-light" required placeholder="Nama Lengkap Anda"
                                        value="<?= htmlspecialchars($_POST['nama'] ?? '') ?>">
+                            </div>
+                        </div>
+                        <!-- Username -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted small">Username</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="fas fa-user text-muted"></i></span>
+                                <input type="text" name="username" class="form-control border-start-0 bg-light" required placeholder="username123"
+                                       value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
                             </div>
                         </div>
                         <!-- Email -->

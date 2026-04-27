@@ -10,6 +10,7 @@ if (isset($_POST['tambah_produk'])) {
     $nama     = trim($_POST['nama_produk']);
     $kategori = $_POST['kategori'];
     $harga    = (int)$_POST['harga'];
+    $harga_coret = (int)($_POST['harga_coret'] ?? 0);
     $stok     = (int)$_POST['stok'];
     $deskripsi= trim($_POST['deskripsi']);
     $gambar   = 'default.png';
@@ -19,8 +20,8 @@ if (isset($_POST['tambah_produk'])) {
         move_uploaded_file($_FILES['gambar']['tmp_name'], '../frontend/images/produk/' . $gambar);
     }
 
-    $conn->prepare("INSERT INTO produk (nama_produk, kategori, harga, stok, deskripsi, gambar) VALUES (?,?,?,?,?,?)")
-         ->execute([$nama, $kategori, $harga, $stok, $deskripsi, $gambar]);
+    $conn->prepare("INSERT INTO produk (nama_produk, kategori, harga, harga_coret, stok, deskripsi, gambar) VALUES (?,?,?,?,?,?,?)")
+         ->execute([$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $gambar]);
     header("Location: produk.php?added=1"); exit;
 }
 
@@ -77,7 +78,7 @@ $active_page = 'produk';
                                        placeholder="Cth: Kacamata Minus Aviator Gold" required>
                             </div>
                             <div class="row g-3 mb-3">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label">Kategori <span class="text-danger">*</span></label>
                                     <select name="kategori" class="form-select" required>
                                         <option value="" disabled selected>Pilih Kategori...</option>
@@ -88,11 +89,18 @@ $active_page = 'produk';
                                         <option value="Aksesoris">Aksesoris & Kotak</option>
                                     </select>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Harga Jual (Rp) <span class="text-danger">*</span></label>
+                                <div class="col-md-4">
+                                    <label class="form-label">Harga Jual <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-light">Rp</span>
                                         <input type="number" name="harga" class="form-control" placeholder="150000" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Harga Coret (Opsional)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light">Rp</span>
+                                        <input type="number" name="harga_coret" class="form-control" placeholder="200000" min="0" value="0">
                                     </div>
                                 </div>
                             </div>

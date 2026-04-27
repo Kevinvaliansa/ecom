@@ -25,9 +25,9 @@ if (isset($_POST['login'])) {
         $email_or_username = 'admin@gmail.com'; 
     }
 
-    // Ambil data user dari database berdasarkan email
-    $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
-    $stmt->execute([$email_or_username]);
+    // Ambil data user dari database berdasarkan email atau username
+    $stmt = $conn->prepare("SELECT * FROM users WHERE email = ? OR username = ?");
+    $stmt->execute([$email_or_username, $email_or_username]);
     $user = $stmt->fetch();
 
     // ==========================================
