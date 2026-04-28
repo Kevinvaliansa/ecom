@@ -144,6 +144,7 @@ $produk_list = $stmt->fetchAll();
             <a href="index.php" class="category-pill <?= !$kategori_filter ? 'active' : '' ?>">Semua Koleksi</a>
             <a href="index.php?kategori=Kacamata Gaya" class="category-pill <?= $kategori_filter == 'Kacamata Gaya' ? 'active' : '' ?>">Kacamata Gaya</a>
             <a href="index.php?kategori=Kacamata Minus" class="category-pill <?= $kategori_filter == 'Kacamata Minus' ? 'active' : '' ?>">Kacamata Minus</a>
+            <a href="index.php?kategori=Kacamata Plus" class="category-pill <?= $kategori_filter == 'Kacamata Plus' ? 'active' : '' ?>">Kacamata Plus</a>
             <a href="index.php?kategori=Aksesoris" class="category-pill <?= $kategori_filter == 'Aksesoris' ? 'active' : '' ?>">Aksesoris & Kotak</a>
         </div>
         
@@ -157,6 +158,13 @@ $produk_list = $stmt->fetchAll();
                         </a>
 
                         <div class="img-wrap">
+                            <?php if(isset($p['harga_coret']) && $p['harga_coret'] > $p['harga']): 
+                                $persen = round((($p['harga_coret'] - $p['harga']) / $p['harga_coret']) * 100);
+                            ?>
+                                <div class="discount-badge">
+                                    <i class="fas fa-bolt me-1"></i> <?= $persen ?>% OFF
+                                </div>
+                            <?php endif; ?>
                             <a href="detail.php?id=<?= $p['id'] ?>">
                                 <img src="frontend/images/produk/<?= htmlspecialchars($p['gambar']) ?>" 
                                     class="<?= ($p['stok'] <= 0) ? 'img-out-of-stock' : '' ?>" 
@@ -178,9 +186,10 @@ $produk_list = $stmt->fetchAll();
                                     Rp <?= number_format($p['harga'], 0, ',', '.') ?>
                                 </div>
                                 <?php if($p['stok'] > 0): ?>
-                                    <a href="cart.php?add_to_cart=<?= $p['id'] ?>&qty=1" class="btn-tambah">
-                                        <i class="fas fa-plus me-1"></i> Tambah
-                                    </a>
+                                    <button class="btn-buy-now px-3 py-1 text-decoration-none small border-0" 
+                                            onclick="openBuyModal(<?= $p['id'] ?>, '<?= addslashes($p['nama_produk']) ?>', <?= $p['harga'] ?>, <?= $p['stok'] ?>)">
+                                        Beli
+                                    </button>
                                 <?php else: ?>
                                     <span class="badge bg-danger">Habis</span>
                                 <?php endif; ?>
@@ -374,6 +383,72 @@ $produk_list = $stmt->fetchAll();
                 hi = (hi + 1) % hints.length;
                 searchInput.setAttribute('placeholder', hints[hi]);
             }, 2200);
+        }
+    </script>
+    
+    <!-- Modal Beli Langsung (Quick Buy) -->
+    <div class="modal fade" id="quickBuyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold text-dark">Beli Produk</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="checkout.php" method="POST">
+                    <div class="modal-body py-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-sage-light p-3 rounded-3 me-3">
+                                <i class="fas fa-glasses fa-2x text-sage-dark"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-1" id="modalProductName">Nama Produk</h6>
+                                <p class="text-sage-dark fw-bold mb-0" id="modalProductPrice">Rp 0</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Jumlah Pembelian</label>
+                            <div class="input-group input-group-lg" style="max-width: 180px;">
+                                <button class="btn btn-outline-secondary border-end-0" type="button" onclick="changeQty(-1)">-</button>
+                                <input type="number" name="direct_buy_qty" id="modalQty" class="form-control text-center border-start-0 border-end-0 fw-bold" value="1" min="1" readonly>
+                                <button class="btn btn-outline-secondary border-start-0" type="button" onclick="changeQty(1)">+</button>
+                            </div>
+                            <div class="mt-2 text-muted small" id="modalStockInfo">Stok: 0</div>
+                        </div>
+                        
+                        <input type="hidden" name="direct_buy_id" id="modalProductId">
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="submit" class="btn btn-buy-now w-100 py-3 shadow-sm">
+                            Lanjut ke Pembayaran <i class="fas fa-arrow-right ms-1"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let maxStock = 0;
+        const buyModal = new bootstrap.Modal(document.getElementById('quickBuyModal'));
+        
+        function openBuyModal(id, name, price, stock) {
+            document.getElementById('modalProductId').value = id;
+            document.getElementById('modalProductName').innerText = name;
+            document.getElementById('modalProductPrice').innerText = 'Rp ' + price.toLocaleString('id-ID');
+            document.getElementById('modalStockInfo').innerText = 'Tersedia: ' + stock + ' unit';
+            document.getElementById('modalQty').value = 1;
+            maxStock = stock;
+            buyModal.show();
+        }
+        
+        function changeQty(amt) {
+            const qtyInput = document.getElementById('modalQty');
+            let currentVal = parseInt(qtyInput.value);
+            let newVal = currentVal + amt;
+            if (newVal >= 1 && newVal <= maxStock) {
+                qtyInput.value = newVal;
+            }
         }
     </script>
 </body>

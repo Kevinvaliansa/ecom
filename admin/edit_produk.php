@@ -16,15 +16,16 @@ if (isset($_POST['edit_produk'])) {
     $harga_coret = (int)($_POST['harga_coret'] ?? 0);
     $stok      = (int)$_POST['stok'];
     $deskripsi = trim($_POST['deskripsi']);
+    $pilihan_varian = trim($_POST['pilihan_varian'] ?? '');
 
     if (!empty($_FILES['gambar']['name'])) {
         $gambar_baru = time() . '_' . basename($_FILES['gambar']['name']);
         move_uploaded_file($_FILES['gambar']['tmp_name'], '../frontend/images/produk/' . $gambar_baru);
-        $conn->prepare("UPDATE produk SET nama_produk=?,kategori=?,harga=?,harga_coret=?,stok=?,deskripsi=?,gambar=? WHERE id=?")
-             ->execute([$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $gambar_baru, $id_edit]);
+        $conn->prepare("UPDATE produk SET nama_produk=?,kategori=?,harga=?,harga_coret=?,stok=?,deskripsi=?,gambar=?,pilihan_varian=? WHERE id=?")
+             ->execute([$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $gambar_baru, $pilihan_varian, $id_edit]);
     } else {
-        $conn->prepare("UPDATE produk SET nama_produk=?,kategori=?,harga=?,harga_coret=?,stok=?,deskripsi=? WHERE id=?")
-             ->execute([$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $id_edit]);
+        $conn->prepare("UPDATE produk SET nama_produk=?,kategori=?,harga=?,harga_coret=?,stok=?,deskripsi=?,pilihan_varian=? WHERE id=?")
+             ->execute([$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $pilihan_varian, $id_edit]);
     }
     header("Location: produk.php?updated=1"); exit;
 }
@@ -114,11 +115,20 @@ $active_page = 'produk';
                                     </div>
                                 </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Stok <span class="text-danger">*</span></label>
-                                <div class="input-group" style="max-width:200px;">
-                                    <input type="number" name="stok" class="form-control" value="<?= $p['stok'] ?>" min="0" required>
-                                    <span class="input-group-text bg-light">pcs</span>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-8">
+                                    <label class="form-label">Pilihan Varian (Pisahkan dengan koma)</label>
+                                    <input type="text" name="pilihan_varian" class="form-control" 
+                                           placeholder="Cth: Hitam, Putih atau -1.0, -1.5, -2.0"
+                                           value="<?= htmlspecialchars($p['pilihan_varian'] ?? '') ?>">
+                                    <small class="text-muted">Kosongkan jika tidak ada pilihan warna/minus.</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Stok <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <input type="number" name="stok" class="form-control" value="<?= $p['stok'] ?>" min="0" required>
+                                        <span class="input-group-text bg-light">pcs</span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="mb-0">

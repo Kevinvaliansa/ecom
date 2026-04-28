@@ -128,100 +128,118 @@ $counts = [
     <div class="modal fade" id="modalDetail<?= $r['id'] ?>" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0" style="border-radius: 16px;">
-                <div class="modal-header" style="background-color: var(--xriva-dark); color: white; border-radius: 16px 16px 0 0;">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-box-open me-2"></i> Isi Paket Pesanan #<?= $r['id'] ?></h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <div class="modal-header border-0 pb-0" style="background: linear-gradient(135deg, #4a7c6b 0%, #3a6356 100%); border-radius: 18px 18px 0 0;">
+                    <h5 class="modal-title text-white fw-bold" id="detailModalLabel<?= $r['id'] ?>">
+                        <i class="fas fa-box-open me-2"></i> Detail Pesanan #<?= $r['id'] ?>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+                        <div>
+                            <div class="small text-muted mb-1">Tanggal Transaksi</div>
+                            <div class="fw-bold text-dark small"><?= date('d F Y, H:i', strtotime($r['tanggal_transaksi'])) ?></div>
+                        </div>
+                        <div class="text-end">
+                            <div class="small text-muted mb-1">Status</div>
+                            <span class="badge rounded-pill <?= $badgeClass ?>"><?= $labelMap[$r['status_pesanan']] ?? $r['status_pesanan'] ?></span>
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold mb-3 small text-muted text-uppercase tracking-wider"><i class="fas fa-list me-1"></i> Daftar Barang</h6>
                     
                     <?php
-                    // Ambil detail barang dari database
                     $stmt_dtl = $conn->prepare("SELECT * FROM detail_transaksi WHERE id_transaksi = ?");
                     $stmt_dtl->execute([$r['id']]);
                     $items = $stmt_dtl->fetchAll();
                     
                     if(count($items) > 0):
                         foreach($items as $item): ?>
-                        <div class="d-flex align-items-center mb-3 border-bottom pb-3">
-                            <img src="frontend/images/produk/<?= htmlspecialchars($item['gambar']) ?>" width="70" height="70" class="rounded border me-3" style="object-fit: cover;">
-                            <div class="flex-grow-1">
-                                <h6 class="m-0 fw-bold text-dark"><?= htmlspecialchars($item['nama_produk']) ?></h6>
-                                <p class="m-0 text-muted small"><?= $item['jumlah'] ?> pcs x Rp <?= number_format($item['harga'], 0, ',', '.') ?></p>
-                            </div>
-                            <div class="fw-bold text-dark">
-                                Rp <?= number_format($item['harga'] * $item['jumlah'], 0, ',', '.') ?>
-                            </div>
-                        </div>
-                        <?php
-                        // Jika transaksi selesai, tampilkan form rating untuk setiap item
-                        if($r['status_pesanan'] === 'selesai'):
-                            // ambil rating user untuk produk ini (jika ada)
-                            $stmtRating = $conn->prepare("SELECT * FROM ratings WHERE id_user = ? AND id_produk = ? LIMIT 1");
-                            $stmtRating->execute([$id_user, $item['id_produk']]);
-                            $userRating = $stmtRating->fetch();
-                        ?>
-                        <div class="mb-3">
-                            <form action="backend/submit_rating.php" method="POST" class="d-flex gap-2 align-items-start">
-                                <input type="hidden" name="id_produk" value="<?= $item['id_produk'] ?>">
-                                <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
-                                <div class="me-2">
-                                    <label class="small text-muted d-block">Rating</label>
-                                    <select name="rating" class="form-select form-select-sm" style="width:110px;">
-                                        <?php for($i=5;$i>=1;$i--): ?>
-                                            <option value="<?= $i ?>" <?= (!empty($userRating) && $userRating['rating'] == $i) ? 'selected' : '' ?>><?= $i ?> ★</option>
-                                        <?php endfor; ?>
-                                    </select>
-                                </div>
+                        <div class="bg-light p-3 rounded-4 mb-3 border-0">
+                            <div class="d-flex align-items-center">
+                                <img src="frontend/images/produk/<?= htmlspecialchars($item['gambar']) ?>" 
+                                     width="60" height="60" class="rounded-3 border me-3" style="object-fit: contain; background:white;">
                                 <div class="flex-grow-1">
-                                    <label class="small text-muted d-block">Ulasan (opsional)</label>
-                                    <textarea name="review" class="form-control form-control-sm" maxlength="500" rows="2"><?= htmlspecialchars($userRating['review'] ?? '') ?></textarea>
+                                    <div class="fw-bold text-dark small mb-0"><?= htmlspecialchars($item['nama_produk']) ?></div>
+                                    <?php if(!empty($item['varian'])): ?>
+                                        <div class="badge bg-white text-muted border fw-normal" style="font-size:0.65rem;"><?= htmlspecialchars($item['varian']) ?></div>
+                                    <?php endif; ?>
+                                    <div class="text-muted small"><?= $item['jumlah'] ?> pcs x Rp <?= number_format($item['harga'], 0, ',', '.') ?></div>
                                 </div>
-                                <div class="align-self-end ms-2">
-                                    <button type="submit" class="btn btn-sm btn-primary rounded-pill fw-bold">Kirim</button>
+                                <div class="fw-bold text-dark small">
+                                    Rp <?= number_format($item['harga'] * $item['jumlah'], 0, ',', '.') ?>
                                 </div>
-                            </form>
-                        </div>
-                        <?php endif; ?>
-                        <?php endforeach; 
-                    else: ?>
-                        <div class="alert alert-warning text-center small rounded-3">
-                            <i class="fas fa-exclamation-triangle me-1"></i> Data detail barang untuk transaksi lama ini tidak tersedia.
-                        </div>
-                    <?php endif; ?>
-
-                    <div class="d-flex justify-content-between mt-4 pt-2">
-                        <span class="fw-bold fs-5 text-muted">Total Tagihan</span>
-                    <span class="fw-bold fs-5 text-sage-dark">Rp <?= number_format($r['total_harga'], 0, ',', '.') ?></span>
-                    </div>
-                </div>
-                <div class="px-4 pb-3">
-                    <?php if(!empty($r['bukti_bayar'])): ?>
-                        <div class="mb-3 text-center">
-                            <p class="small text-muted mb-1">Bukti Pembayaran</p>
-                            <img src="frontend/images/bukti/<?= htmlspecialchars($r['bukti_bayar']) ?>" class="rounded" style="max-width:260px; max-height:260px; object-fit:contain; border:1px solid #e9ecef;">
-                            <?php if($r['status_pesanan'] == 'pending'): ?>
-                                <div class="small text-secondary mt-2">Menunggu verifikasi admin.</div>
+                            </div>
+                            
+                            <?php if($r['status_pesanan'] === 'selesai'): 
+                                $stmtRating = $conn->prepare("SELECT * FROM ratings WHERE id_user = ? AND id_produk = ? LIMIT 1");
+                                $stmtRating->execute([$id_user, $item['id_produk']]);
+                                $userRating = $stmtRating->fetch();
+                            ?>
+                            <div class="mt-3 pt-3 border-top">
+                                <form action="backend/submit_rating.php" method="POST" class="row g-2">
+                                    <input type="hidden" name="id_produk" value="<?= $item['id_produk'] ?>">
+                                    <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                                    <div class="col-4">
+                                        <select name="rating" class="form-select form-select-sm rounded-pill">
+                                            <?php for($i=5;$i>=1;$i--): ?>
+                                                <option value="<?= $i ?>" <?= (!empty($userRating) && $userRating['rating'] == $i) ? 'selected' : '' ?>><?= $i ?> ★</option>
+                                            <?php endfor; ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="text" name="review" class="form-control form-control-sm rounded-pill" placeholder="Ulasan..." value="<?= htmlspecialchars($userRating['review'] ?? '') ?>">
+                                    </div>
+                                    <div class="col-2">
+                                        <button type="submit" class="btn btn-sm btn-sage w-100 rounded-circle"><i class="fas fa-paper-plane"></i></button>
+                                    </div>
+                                </form>
+                            </div>
                             <?php endif; ?>
                         </div>
-                    <?php else: ?>
-                        <?php if($r['status_pesanan'] == 'pending'): ?>
-                            <form action="backend/upload_bukti.php" method="POST" enctype="multipart/form-data" class="mb-3" id="formUpload<?= $r['id'] ?>">
+                        <?php endforeach; 
+                    else: ?>
+                        <div class="alert alert-warning text-center small rounded-4">Data tidak tersedia.</div>
+                    <?php endif; ?>
+
+                    <div class="mt-4 p-3 rounded-4" style="background-color: #f0f4f2;">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Subtotal Barang</span>
+                            <span>Rp <?= number_format($r['total_harga'] - $r['biaya_ongkir'], 0, ',', '.') ?></span>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mb-2">
+                            <span>Ongkos Kirim (<?= htmlspecialchars($r['ekspedisi'] ?? '-') ?>)</span>
+                            <span>Rp <?= number_format($r['biaya_ongkir'], 0, ',', '.') ?></span>
+                        </div>
+                        <div class="d-flex justify-content-between border-top pt-2 mt-2">
+                            <span class="fw-bold text-dark">Total Tagihan</span>
+                            <span class="fw-bold fs-4 text-sage-dark">Rp <?= number_format($r['total_harga'], 0, ',', '.') ?></span>
+                        </div>
+                    </div>
+
+                    <?php if(!empty($r['bukti_bayar'])): ?>
+                        <div class="mt-4 text-center">
+                            <div class="small fw-bold text-muted mb-2 text-uppercase tracking-wider">Bukti Pembayaran</div>
+                            <img src="frontend/images/bukti/<?= htmlspecialchars($r['bukti_bayar']) ?>" class="rounded-4 shadow-sm" style="max-width:100%; max-height:250px; object-fit:contain; border:1px solid #e9ecef;">
+                        </div>
+                    <?php elseif($r['status_pesanan'] == 'pending'): ?>
+                        <div class="mt-4 pt-3 border-top">
+                            <h6 class="fw-bold mb-3 small text-muted text-uppercase tracking-wider">Upload Bukti Transfer</h6>
+                            <form action="backend/upload_bukti.php" method="POST" enctype="multipart/form-data" class="bg-white p-3 rounded-4 border shadow-sm">
                                 <input type="hidden" name="id_transaksi" value="<?= $r['id'] ?>">
                                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
-                                <label class="form-label small text-muted">Upload Bukti Pembayaran (JPG/PNG)</label>
-                                <input type="file" id="buktiInput<?= $r['id'] ?>" name="bukti" data-trx="<?= $r['id'] ?>" accept="image/*" class="form-control mb-2 bukti-input" required>
-                                <div id="buktiError<?= $r['id'] ?>" class="small text-danger mb-2" style="display:none;"></div>
-                                <div id="previewWrap<?= $r['id'] ?>" class="mb-3" style="display:none;">
-                                    <p class="small text-muted mb-1">Preview:</p>
-                                    <img id="buktiPreview<?= $r['id'] ?>" src="#" alt="preview" style="max-width:200px; max-height:200px; object-fit:contain; border:1px solid #e9ecef;" class="rounded">
+                                <div class="mb-3">
+                                    <input type="file" name="bukti" class="form-control form-control-sm rounded-pill" required>
                                 </div>
-                                <button type="submit" id="btnUpload<?= $r['id'] ?>" class="btn btn-success w-100 rounded-pill fw-bold">Upload Bukti Pembayaran</button>
+                                <button type="submit" class="btn btn-sage w-100 rounded-pill fw-bold py-2 shadow-sm">
+                                    <i class="fas fa-upload me-2"></i> Kirim Bukti Sekarang
+                                </button>
                             </form>
-                        <?php endif; ?>
+                        </div>
                     <?php endif; ?>
                 </div>
                 <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-light w-100 rounded-pill fw-bold" data-bs-dismiss="modal">Tutup</button>
+                    <button type="button" class="btn btn-light w-100 rounded-pill fw-bold py-2" data-bs-dismiss="modal">Tutup</button>
                 </div>
             </div>
         </div>

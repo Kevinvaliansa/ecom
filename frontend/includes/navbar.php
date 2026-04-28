@@ -52,12 +52,26 @@ if (isset($_SESSION['user_id']) && isset($conn)) {
                     </a>
                 </li>
 
+<?php
+if (isset($_SESSION['user_id'])) {
+    $stmt_user = $conn->prepare("SELECT foto FROM users WHERE id = ?");
+    $stmt_user->execute([$_SESSION['user_id']]);
+    $user_nav = $stmt_user->fetch();
+    $user_foto = (!empty($user_nav['foto']) && file_exists("frontend/images/profil/" . $user_nav['foto'])) 
+                 ? "frontend/images/profil/" . $user_nav['foto'] 
+                 : null;
+}
+?>
                 <!-- User Dropdown -->
                 <li class="nav-item dropdown ms-2 d-flex align-items-center border-start ps-3">
-                    <div class="rounded-circle d-flex justify-content-center align-items-center bg-white text-sage-dark fw-bold me-2 shadow-sm"
-                         style="width: 35px; height: 35px; font-size: 1rem;">
-                        <?= $inisial_nav ?>
-                    </div>
+                    <?php if (isset($user_foto)): ?>
+                        <img src="<?= $user_foto ?>" class="rounded-circle me-2 shadow-sm" style="width: 35px; height: 35px; object-fit: cover;">
+                    <?php else: ?>
+                        <div class="rounded-circle d-flex justify-content-center align-items-center bg-white text-sage-dark fw-bold me-2 shadow-sm"
+                             style="width: 35px; height: 35px; font-size: 1rem;">
+                            <?= $inisial_nav ?>
+                        </div>
+                    <?php endif; ?>
                     <a class="nav-link dropdown-toggle fw-bold text-white p-0" href="#" data-bs-toggle="dropdown" aria-expanded="false">
                         <?= htmlspecialchars($_SESSION['user_nama']) ?>
                     </a>
@@ -67,14 +81,17 @@ if (isset($_SESSION['user_id']) && isset($conn)) {
                                 <i class="fas fa-user-shield me-2"></i> Dashboard Admin
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
-                        <?php endif; ?>
-                        <!-- Info akun -->
+                        <?php endif; ?>                        <!-- Info akun -->
                         <li class="px-3 py-2">
                             <div class="d-flex align-items-center gap-2">
-                                <div class="rounded-circle d-flex justify-content-center align-items-center fw-bold text-white"
-                                     style="width:36px;height:36px;font-size:1rem;background:var(--xriva-primary);flex-shrink:0;">
-                                    <?= $inisial_nav ?>
-                                </div>
+                                <?php if (isset($user_foto)): ?>
+                                    <img src="<?= $user_foto ?>" class="rounded-circle shadow-sm" style="width:36px;height:36px;object-fit:cover;flex-shrink:0;">
+                                <?php else: ?>
+                                    <div class="rounded-circle d-flex justify-content-center align-items-center fw-bold text-white"
+                                         style="width:36px;height:36px;font-size:1rem;background:var(--xriva-primary);flex-shrink:0;">
+                                        <?= $inisial_nav ?>
+                                    </div>
+                                <?php endif; ?>
                                 <div>
                                     <div class="fw-bold text-dark small"><?= htmlspecialchars($_SESSION['user_nama']) ?></div>
                                     <a href="profile.php" class="text-muted text-decoration-none" style="font-size:0.78rem;">
@@ -82,7 +99,8 @@ if (isset($_SESSION['user_id']) && isset($conn)) {
                                     </a>
                                 </div>
                             </div>
-                        </li>
+                        </li>                        <!-- Info akun -->
+
                         <li><hr class="dropdown-divider my-1"></li>
                         <li><a class="dropdown-item text-danger py-2 fw-semibold" href="logout.php">
                             <i class="fas fa-sign-out-alt me-2"></i> Logout

@@ -356,4 +356,68 @@ body {
     0%   { background-position: 200% 0; }
     100% { background-position: -200% 0; }
 }
+
+/* --- FITUR URGENSI & PROMO (SHOPEE STYLE) --- */
+.discount-badge {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: var(--xriva-dark); /* Menggunakan warna tema gelap */
+    color: white;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    border-bottom-right-radius: 10px;
+    z-index: 11;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+}
+
+.flash-sale-container {
+    background: linear-gradient(90deg, var(--xriva-dark), var(--xriva-primary));
+    color: white;
+    padding: 10px 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.timer-box {
+    background: #333;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    margin: 0 2px;
+    font-family: monospace;
+}
+
+.stock-warning {
+    color: #d63384; /* Warna pink/merah muda untuk peringatan */
+    font-weight: 700;
+    font-size: 0.85rem;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.btn-buy-now {
+    background-color: var(--xriva-primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.btn-buy-now:hover {
+    background-color: var(--xriva-dark);
+    color: white;
+    transform: translateY(-2px);
+}
 

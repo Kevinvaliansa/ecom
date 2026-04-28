@@ -91,7 +91,8 @@ function getStatusPesanan($conn, $user_id) {
 // ===================================================================
 $intents = [
     "sapaan" => ["halo", "hai", "pagi", "siang", "sore", "malam", "p", "permisi", "oi", "hei", "hello"],
-    "kacamata_minus" => ["minus", "rabun", "lensa", "silinder", "baca", "penglihatan", "silindris"],
+    "kacamata_minus" => ["minus", "rabun", "lensa", "silinder", "penglihatan", "silindris"],
+    "kacamata_plus" => ["plus", "baca", "dekat", "tua", "presbiopi"],
     "kacamata_gaya" => ["gaya", "fashion", "hitam", "jalan", "pantai", "sunglasses", "kece", "keren"],
     "pembayaran" => ["bayar", "transfer", "cod", "dana", "ovo", "gopay", "rekening", "harga", "rekeningnya", "cash"],
     "cek_keranjang" => ["keranjang", "cart", "belanjaan", "troli", "isi", "pesananku", "orderan", "belanja"],
@@ -161,6 +162,9 @@ if ($highest_score >= 3) { // Minimal skor diturunkan sedikit agar typo 1 huruf 
         case "kacamata_minus":
             $reply = getProdukByKategori($conn, "Kacamata Minus");
             break;
+        case "kacamata_plus":
+            $reply = getProdukByKategori($conn, "Kacamata Plus");
+            break;
         case "kacamata_gaya":
             $reply = getProdukByKategori($conn, "Kacamata Gaya");
             break;
@@ -174,12 +178,14 @@ if ($highest_score >= 3) { // Minimal skor diturunkan sedikit agar typo 1 huruf 
             $reply = getStatusPesanan($conn, $user_id);
             break;
         case "rekomendasi":
-            if (strpos($pesanUser, "minus") !== false || strpos($pesanUser, "rabun") !== false) {
+            if (strpos($pesanUser, "minus") !== false || strpos($pesanUser, "rabun jauh") !== false) {
                 $reply = getProdukByKategori($conn, "Kacamata Minus");
+            } elseif (strpos($pesanUser, "plus") !== false || strpos($pesanUser, "baca") !== false || strpos($pesanUser, "dekat") !== false) {
+                $reply = getProdukByKategori($conn, "Kacamata Plus");
             } elseif (strpos($pesanUser, "gaya") !== false || strpos($pesanUser, "hitam") !== false) {
                 $reply = getProdukByKategori($conn, "Kacamata Gaya");
             } else {
-                $reply = "Xriva punya koleksi <a href='index.php?kategori=Kacamata Gaya'>Kacamata Gaya</a> untuk jalan-jalan santai, dan <a href='index.php?kategori=Kacamata Minus'>Kacamata Minus</a> untuk membantu penglihatanmu. $nama_user lagi butuh yang mana nih?";
+                $reply = "Xriva punya koleksi <a href='index.php?kategori=Kacamata Gaya'>Kacamata Gaya</a> untuk jalan-jalan santai, <a href='index.php?kategori=Kacamata Minus'>Kacamata Minus</a> untuk membantu penglihatan jauh, dan <a href='index.php?kategori=Kacamata Plus'>Kacamata Plus</a> untuk membaca. $nama_user lagi butuh yang mana nih?";
             }
             break;
         case "apresiasi":

@@ -147,8 +147,14 @@ $active_page = 'transaksi';
                                 <div class="fw-semibold text-dark"><?= htmlspecialchars($t['nama']) ?></div>
                                 <div class="text-muted" style="font-size:.76rem;"><i class="fas fa-phone me-1"></i><?= htmlspecialchars($t['no_hp']) ?></div>
                             </td>
-                            <td class="fw-bold" style="color:var(--sage)">Rp <?= number_format($t['total_harga'],0,',','.') ?></td>
-                            <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($t['metode_pembayaran']) ?></span></td>
+                            <td class="fw-bold" style="color:var(--sage)">
+                                Rp <?= number_format($t['total_harga'],0,',','.') ?>
+                                <div class="text-muted" style="font-size:0.65rem;">Ongkir: Rp <?= number_format($t['biaya_ongkir'],0,',','.') ?></div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border"><?= htmlspecialchars($t['metode_pembayaran']) ?></span>
+                                <div class="text-muted" style="font-size:0.65rem;"><?= htmlspecialchars($t['ekspedisi'] ?? '-') ?></div>
+                            </td>
                             <td class="text-muted" style="font-size:.78rem;"><?= date('d M Y<\b\r>H:i', strtotime($t['tanggal_transaksi'])) ?></td>
                             <td><span class="<?= $badgeClass ?>"><?= $labelMap[$t['status_pesanan']] ?? $t['status_pesanan'] ?></span></td>
                             <td class="text-center">
@@ -248,6 +254,9 @@ $active_page = 'transaksi';
                             <img src="../frontend/images/produk/<?= htmlspecialchars($item['gambar']) ?>" style="width:50px;height:50px;border-radius:10px;object-fit:cover;border:1px solid #eee;">
                             <div class="flex-grow-1">
                                 <div class="fw-semibold text-dark small"><?= htmlspecialchars($item['nama_produk'] ?? '-') ?></div>
+                                <?php if (!empty($item['varian'])): ?>
+                                    <div class="text-muted" style="font-size:.7rem;">Varian: <?= htmlspecialchars($item['varian']) ?></div>
+                                <?php endif; ?>
                                 <div class="text-muted" style="font-size:.75rem;"><?= $item['jumlah'] ?> pcs × Rp <?= number_format($item['harga'],0,',','.') ?></div>
                             </div>
                             <div class="fw-bold text-dark small">Rp <?= number_format($item['harga']*$item['jumlah'],0,',','.') ?></div>
@@ -256,7 +265,15 @@ $active_page = 'transaksi';
                         <?php if (empty($items)): ?>
                         <p class="text-muted small text-center py-3">Rincian tidak tersedia.</p>
                         <?php endif; ?>
-                        <div class="d-flex justify-content-between pt-2 fw-bold">
+                        <div class="d-flex justify-content-between pt-2 small text-muted">
+                            <span>Subtotal Barang</span>
+                            <span>Rp <?= number_format($t['total_harga'] - $t['biaya_ongkir'],0,',','.') ?></span>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mb-2">
+                            <span>Ongkos Kirim (<?= htmlspecialchars($t['ekspedisi'] ?? '-') ?>)</span>
+                            <span>Rp <?= number_format($t['biaya_ongkir'],0,',','.') ?></span>
+                        </div>
+                        <div class="d-flex justify-content-between pt-2 border-top fw-bold">
                             <span>Total Tagihan</span>
                             <span style="color:var(--sage)">Rp <?= number_format($t['total_harga'],0,',','.') ?></span>
                         </div>
@@ -264,7 +281,11 @@ $active_page = 'transaksi';
                         <?php if (!empty($t['bukti_bayar'])): ?>
                         <hr>
                         <h6 class="fw-bold text-muted small text-uppercase mb-2"><i class="fas fa-image me-2"></i>Bukti Pembayaran</h6>
-                        <img src="../frontend/images/bukti/<?= htmlspecialchars($t['bukti_bayar']) ?>" class="rounded w-100" style="max-height:200px;object-fit:contain;border:1px solid #eee;">
+                        <img src="../frontend/images/bukti/<?= htmlspecialchars($t['bukti_bayar']) ?>" 
+                             class="rounded w-100 img-fluid proof-img" 
+                             style="max-height:200px;object-fit:contain;border:1px solid #eee;cursor:pointer;"
+                             onclick="viewFullImage('../frontend/images/bukti/<?= htmlspecialchars($t['bukti_bayar']) ?>')">
+                        <div class="text-center mt-1"><small class="text-muted"><i class="fas fa-search-plus me-1"></i> Klik untuk memperbesar</small></div>
                         <?php elseif ($s == 'pending'): ?>
                         <hr>
                         <div class="text-center text-muted small py-2"><i class="fas fa-hourglass me-1"></i>Menunggu upload bukti dari pembeli.</div>
@@ -276,6 +297,18 @@ $active_page = 'transaksi';
     </div>
 </div>
 <?php endforeach; ?>
+<div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content bg-transparent border-0">
+            <div class="modal-header border-0 p-0 position-relative">
+                <button type="button" class="btn-close btn-close-white position-absolute" style="top:20px; right:20px; z-index:10;" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0 text-center">
+                <img src="" id="fullSizeImage" class="img-fluid rounded shadow-lg" style="max-height: 90vh;">
+            </div>
+        </div>
+    </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <?php if (isset($_SESSION['admin_msg'])): $am = $_SESSION['admin_msg']; unset($_SESSION['admin_msg']); ?>
@@ -291,6 +324,11 @@ function confirmApprove(id) {
 function confirmReject(id) {
     Swal.fire({ title:'Tolak bukti?', input:'textarea', inputLabel:'Alasan (opsional)', showCancelButton:true, confirmButtonText:'Tolak', confirmButtonColor:'#dc3545', cancelButtonColor:'#6c757d' })
     .then(r => { if(r.isConfirmed) { document.getElementById('reason'+id).value=r.value||''; document.getElementById('formReject'+id).submit(); } });
+}
+const imgModal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
+function viewFullImage(src) {
+    document.getElementById('fullSizeImage').src = src;
+    imgModal.show();
 }
 </script>
 </body>

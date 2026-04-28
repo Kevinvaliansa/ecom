@@ -13,6 +13,7 @@ if (isset($_POST['tambah_produk'])) {
     $harga_coret = (int)($_POST['harga_coret'] ?? 0);
     $stok     = (int)$_POST['stok'];
     $deskripsi= trim($_POST['deskripsi']);
+    $pilihan_varian = trim($_POST['pilihan_varian'] ?? '');
     $gambar   = 'default.png';
 
     if (!empty($_FILES['gambar']['name'])) {
@@ -20,8 +21,8 @@ if (isset($_POST['tambah_produk'])) {
         move_uploaded_file($_FILES['gambar']['tmp_name'], '../frontend/images/produk/' . $gambar);
     }
 
-    $conn->prepare("INSERT INTO produk (nama_produk, kategori, harga, harga_coret, stok, deskripsi, gambar) VALUES (?,?,?,?,?,?,?)")
-         ->execute([$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $gambar]);
+    $conn->prepare("INSERT INTO produk (nama_produk, kategori, harga, harga_coret, stok, deskripsi, gambar, pilihan_varian) VALUES (?,?,?,?,?,?,?,?)")
+         ->execute([$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $gambar, $pilihan_varian]);
     header("Location: produk.php?added=1"); exit;
 }
 
@@ -104,11 +105,18 @@ $active_page = 'produk';
                                     </div>
                                 </div>
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Stok Awal <span class="text-danger">*</span></label>
-                                <div class="input-group" style="max-width:200px;">
-                                    <input type="number" name="stok" class="form-control" value="10" min="0" required>
-                                    <span class="input-group-text bg-light">pcs</span>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-8">
+                                    <label class="form-label">Pilihan Varian (Pisahkan dengan koma)</label>
+                                    <input type="text" name="pilihan_varian" class="form-control" placeholder="Cth: Hitam, Putih atau -1.0, -1.5, -2.0">
+                                    <small class="text-muted">Kosongkan jika tidak ada pilihan warna/minus.</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Stok Awal <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <input type="number" name="stok" class="form-control" value="10" min="0" required>
+                                        <span class="input-group-text bg-light">pcs</span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="mb-0">

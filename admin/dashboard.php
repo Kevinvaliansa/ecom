@@ -239,8 +239,8 @@ for ($i = 6; $i >= 0; $i--) {
                     </div>
                     <div>
                         <div class="stat-label">Pendapatan Bulan Ini</div>
-                        <div class="stat-value">Rp <?= number_format($pendapatan_bulan, 0, ',', '.') ?></div>
-                        <div class="stat-sub">Hari ini: Rp <?= number_format($pendapatan_hari, 0, ',', '.') ?></div>
+                        <div class="stat-value">Rp <?= number_format((float)$pendapatan_bulan, 0, ',', '.') ?></div>
+                        <div class="stat-sub">Hari ini: Rp <?= number_format((float)$pendapatan_hari, 0, ',', '.') ?></div>
                     </div>
                 </div>
             </div>
@@ -412,11 +412,13 @@ for ($i = 6; $i >= 0; $i--) {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// Revenue Chart
 const ctx = document.getElementById('revenueChart').getContext('2d');
+
+// Premium Gradient
 const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-gradient.addColorStop(0, 'rgba(82,121,111,0.3)');
-gradient.addColorStop(1, 'rgba(82,121,111,0)');
+gradient.addColorStop(0, 'rgba(82, 121, 111, 0.4)');
+gradient.addColorStop(0.5, 'rgba(82, 121, 111, 0.1)');
+gradient.addColorStop(1, 'rgba(82, 121, 111, 0)');
 
 new Chart(ctx, {
     type: 'line',
@@ -426,37 +428,64 @@ new Chart(ctx, {
             label: 'Pendapatan',
             data: <?= json_encode($chart_data) ?>,
             borderColor: '#52796f',
+            borderWidth: 3,
             backgroundColor: gradient,
-            borderWidth: 2.5,
-            pointBackgroundColor: '#52796f',
-            pointRadius: 5,
-            pointHoverRadius: 7,
             fill: true,
-            tension: 0.4
+            tension: 0.45, 
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: '#52796f',
+            pointBorderWidth: 2,
+            pointRadius: <?= count($chart_data) > 30 ? 0 : 4 ?>,
+            pointHoverRadius: 6,
+            pointHoverBackgroundColor: '#52796f',
+            pointHoverBorderColor: '#fff',
+            pointHoverBorderWidth: 3,
         }]
     },
     options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
             legend: { display: false },
             tooltip: {
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                titleColor: '#2f3e46',
+                bodyColor: '#2f3e46',
+                bodyFont: { weight: 'bold', size: 13 },
+                padding: 10,
+                borderColor: '#e9ecef',
+                borderWidth: 1,
+                displayColors: false,
                 callbacks: {
-                    label: ctx => 'Rp ' + ctx.parsed.y.toLocaleString('id-ID')
+                    label: function(context) {
+                        return 'Rp ' + context.parsed.y.toLocaleString('id-ID');
+                    }
                 }
             }
         },
         scales: {
             y: {
                 beginAtZero: true,
-                grid: { color: '#f1f3f5' },
+                grid: {
+                    color: '#f8f9fa',
+                    drawBorder: false,
+                },
                 ticks: {
-                    callback: val => 'Rp ' + (val >= 1000000 ? (val/1000000).toFixed(1)+'jt' : val.toLocaleString('id-ID')),
-                    font: { size: 11 }
+                    callback: function(value) {
+                        if (value >= 1000000) return (value / 1000000) + 'jt';
+                        return value.toLocaleString('id-ID');
+                    },
+                    font: { size: 10 },
+                    color: '#adb5bd',
+                    maxTicksLimit: 5
                 }
             },
             x: {
                 grid: { display: false },
-                ticks: { font: { size: 11 } }
+                ticks: {
+                    font: { size: 10 },
+                    color: '#adb5bd'
+                }
             }
         }
     }

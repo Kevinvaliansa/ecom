@@ -41,13 +41,25 @@ $stmt->execute([$tgl_mulai, $tgl_selesai]);
 $top_products = $stmt->fetchAll();
 
 // 4. Grafik harian dalam periode
-$stmt = $conn->prepare("SELECT DATE(tanggal_transaksi) as tgl, COALESCE(SUM(total_harga),0) as total, COUNT(*) as cnt FROM transaksi WHERE status_pesanan='selesai' AND DATE(tanggal_transaksi) BETWEEN ? AND ? GROUP BY DATE(tanggal_transaksi) ORDER BY tgl ASC");
+$stmt = $conn->prepare("SELECT DATE(tanggal_transaksi) as tgl, COALESCE(SUM(total_harga),0) as total FROM transaksi WHERE status_pesanan='selesai' AND DATE(tanggal_transaksi) BETWEEN ? AND ? GROUP BY DATE(tanggal_transaksi) ORDER BY tgl ASC");
 $stmt->execute([$tgl_mulai, $tgl_selesai]);
 $chart_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$chart_labels = array_map(fn($r) => date('d M', strtotime($r['tgl'])), $chart_raw);
-$chart_data   = array_map(fn($r) => (float)$r['total'], $chart_raw);
-$chart_cnt    = array_map(fn($r) => (int)$r['cnt'], $chart_raw);
+$processed_data = [];
+// Jika tanggal pertama data bukan tgl_mulai, tambahkan tgl_mulai dengan nilai 0 agar grafik "start from 0"
+if (empty($chart_raw) || $chart_raw[0]['tgl'] != $tgl_mulai) {
+    $processed_data[] = ['tgl' => $tgl_mulai, 'total' => 0];
+}
+foreach ($chart_raw as $r) {
+    $processed_data[] = $r;
+}
+// Jika tanggal terakhir data bukan tgl_selesai, tambahkan tgl_selesai dengan nilai 0
+if (!empty($processed_data) && end($processed_data)['tgl'] != $tgl_selesai) {
+    $processed_data[] = ['tgl' => $tgl_selesai, 'total' => 0];
+}
+
+$chart_labels = array_map(fn($r) => date('d M', strtotime($r['tgl'])), $processed_data);
+$chart_data   = array_map(fn($r) => (float)$r['total'], $processed_data);
 
 // Max terlaris (untuk progress bar)
 $max_terlaris = !empty($top_products) ? max(array_column($top_products, 'total_terjual')) : 1;
@@ -152,7 +164,7 @@ $active_page = 'laporan';
                     <div class="stat-icon" style="background:#fff3cd"><i class="fas fa-receipt" style="color:#ffc107"></i></div>
                     <div>
                         <div class="stat-label">Rata-rata / Transaksi</div>
-                        <div class="stat-value" style="font-size:1.1rem;">Rp <?= number_format($rata, 0, ',', '.') ?></div>
+                        <div class="stat-value" style="font-size:1.1rem;">Rp <?= number_format((float)$rata, 0, ',', '.') ?></div>
                         <div class="stat-sub">Nilai rata-rata order</div>
                     </div>
                 </div>
@@ -220,7 +232,7 @@ $active_page = 'laporan';
                                     <div style="height:100%;border-radius:3px;background:var(--sage-light);width:<?= round(($top['total_terjual']/$max_terlaris)*100) ?>%;transition:.5s;"></div>
                                 </div>
                                 <div class="text-end" style="font-size:.7rem;color:#adb5bd;margin-top:2px;">
-                                    Omzet: Rp <?= number_format($top['total_omzet'], 0, ',', '.') ?>
+                                    Omzet: Rp <?= number_format((float)$top['total_omzet'], 0, ',', '.') ?>
                                 </div>
                             </div>
                             <?php endforeach; ?>
@@ -292,9 +304,12 @@ $active_page = 'laporan';
 <?php if (!empty($chart_data)): ?>
 <script>
 const ctx = document.getElementById('revenueChart').getContext('2d');
-const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-gradient.addColorStop(0, 'rgba(82,121,111,0.3)');
-gradient.addColorStop(1, 'rgba(82,121,111,0)');
+
+// Premium Gradient
+const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+gradient.addColorStop(0, 'rgba(82, 121, 111, 0.4)');
+gradient.addColorStop(0.5, 'rgba(82, 121, 111, 0.1)');
+gradient.addColorStop(1, 'rgba(82, 121, 111, 0)');
 
 new Chart(ctx, {
     type: 'line',
@@ -304,37 +319,67 @@ new Chart(ctx, {
             label: 'Pendapatan',
             data: <?= json_encode($chart_data) ?>,
             borderColor: '#52796f',
+            borderWidth: 3,
             backgroundColor: gradient,
-            borderWidth: 2.5,
-            pointBackgroundColor: '#52796f',
-            pointRadius: 5,
-            pointHoverRadius: 7,
             fill: true,
-            tension: 0.4
+            tension: 0.45, 
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: '#52796f',
+            pointBorderWidth: 2,
+            pointRadius: <?= count($chart_data) > 30 ? 0 : 4 ?>, // Sembunyikan titik jika data terlalu banyak (>30)
+            pointHoverRadius: 6,
+            pointHoverBackgroundColor: '#52796f',
+            pointHoverBorderColor: '#fff',
+            pointHoverBorderWidth: 3,
         }]
     },
     options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
             legend: { display: false },
             tooltip: {
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                titleColor: '#2f3e46',
+                bodyColor: '#2f3e46',
+                bodyFont: { weight: 'bold', size: 14 },
+                padding: 12,
+                borderColor: '#e9ecef',
+                borderWidth: 1,
+                displayColors: false,
                 callbacks: {
-                    label: ctx => 'Rp ' + ctx.parsed.y.toLocaleString('id-ID')
+                    label: function(context) {
+                        return 'Total: Rp ' + context.parsed.y.toLocaleString('id-ID');
+                    }
                 }
             }
         },
         scales: {
             y: {
                 beginAtZero: true,
-                grid: { color: '#f1f3f5' },
+                grid: {
+                    color: '#f1f3f5',
+                    drawBorder: false,
+                },
                 ticks: {
-                    callback: val => 'Rp ' + (val >= 1000000 ? (val/1000000).toFixed(1)+'jt' : val.toLocaleString('id-ID')),
-                    font: { size: 11 }
+                    callback: function(value) {
+                        if (value >= 1000000) return 'Rp ' + (value / 1000000) + 'jt';
+                        return 'Rp ' + value.toLocaleString('id-ID');
+                    },
+                    font: { size: 11, family: "'Inter', sans-serif" },
+                    color: '#adb5bd',
+                    padding: 10
                 }
             },
             x: {
                 grid: { display: false },
-                ticks: { font: { size: 11 } }
+                ticks: {
+                    font: { size: 10, family: "'Inter', sans-serif" },
+                    color: '#adb5bd',
+                    maxRotation: 0,
+                    autoSkip: true,
+                    maxTicksLimit: 10 // Membatasi jumlah label agar tidak sesak
+                }
             }
         }
     }

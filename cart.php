@@ -10,22 +10,41 @@ $id_user = $_SESSION['user_id'];
 // ==============================================================
 // LOGIKA TAMBAH KERANJANG (dari index.php via GET, atau form via POST)
 // ==============================================================
-$is_add_cart = isset($_POST['add_to_cart']) || isset($_GET['add_to_cart']);
+$is_add_cart = isset($_POST['add_to_cart']) || isset($_GET['add_to_cart']) || isset($_POST['buy_now']) || isset($_GET['buy_now']);
 if ($is_add_cart) {
-    $id_produk = (int)($_POST['id_produk'] ?? $_GET['add_to_cart'] ?? 0);
+    $id_produk = (int)($_POST['id_produk'] ?? $_GET['add_to_cart'] ?? $_GET['buy_now'] ?? 0);
     $qty       = (int)($_POST['qty']       ?? $_GET['qty']       ?? 1);
+    $varian    = trim($_POST['varian']     ?? '');
     if ($qty < 1) $qty = 1;
 
     if ($id_produk > 0) {
-        $cek = $conn->prepare("SELECT * FROM cart WHERE id_user = ? AND id_produk = ?");
-        $cek->execute([$id_user, $id_produk]);
+        $cek = $conn->prepare("SELECT * FROM cart WHERE id_user = ? AND id_produk = ? AND varian = ?");
+        $cek->execute([$id_user, $id_produk, $varian]);
 
         if ($cek->rowCount() > 0) {
-            $conn->prepare("UPDATE cart SET qty = qty + ? WHERE id_user = ? AND id_produk = ?")->execute([$qty, $id_user, $id_produk]);
-            $_SESSION['toast'] = ['type' => 'success', 'message' => 'Jumlah produk di keranjang diperbarui!'];
+            $conn->prepare("UPDATE cart SET qty = qty + ? WHERE id_user = ? AND id_produk = ? AND varian = ?")->execute([$qty, $id_user, $id_produk, $varian]);
+            if (!isset($_POST['buy_now']) && !isset($_GET['buy_now'])) {
+                $_SESSION['toast'] = ['type' => 'success', 'message' => 'Jumlah produk di keranjang diperbarui!'];
+            }
         } else {
-            $conn->prepare("INSERT INTO cart (id_user, id_produk, qty) VALUES (?, ?, ?)")->execute([$id_user, $id_produk, $qty]);
-            $_SESSION['toast'] = ['type' => 'success', 'message' => 'Produk berhasil ditambahkan ke keranjang!'];
+            $conn->prepare("INSERT INTO cart (id_user, id_produk, qty, varian) VALUES (?, ?, ?, ?)")->execute([$id_user, $id_produk, $qty, $varian]);
+            if (!isset($_POST['buy_now']) && !isset($_GET['buy_now'])) {
+                $_SESSION['toast'] = ['type' => 'success', 'message' => 'Produk berhasil ditambahkan ke keranjang!'];
+            }
+        }
+
+        // Jika Beli Langsung, ambil ID cart-nya dan langsung arahkan ke checkout
+        if (isset($_POST['buy_now']) || isset($_GET['buy_now'])) {
+            $stmt_cid = $conn->prepare("SELECT id FROM cart WHERE id_user = ? AND id_produk = ? AND varian = ?");
+            $stmt_cid->execute([$id_user, $id_produk, $varian]);
+            $cart_id = $stmt_cid->fetchColumn();
+
+            echo "
+            <form id='buyNowForm' action='checkout.php' method='POST'>
+                <input type='hidden' name='selected_items[]' value='$cart_id'>
+            </form>
+            <script>document.getElementById('buyNowForm').submit();</script>";
+            exit;
         }
     }
     
@@ -57,7 +76,7 @@ if (isset($_GET['hapus'])) {
 }
 
 // Ambil data keranjang
-$stmt = $conn->prepare("SELECT c.id as id_cart, c.qty, p.id as id_produk, p.nama_produk, p.harga, p.gambar, p.stok
+$stmt = $conn->prepare("SELECT c.id as id_cart, c.qty, c.varian, p.id as id_produk, p.nama_produk, p.harga, p.gambar, p.stok
                         FROM cart c JOIN produk p ON c.id_produk = p.id
                         WHERE c.id_user = ? ORDER BY c.id DESC");
 $stmt->execute([$id_user]);
@@ -139,6 +158,9 @@ $cart_list = $stmt->fetchAll();
                                      style="object-fit: contain; background:#f8f9fa;">
                                 <div>
                                     <h6 class="fw-bold mb-1 text-dark"><?= htmlspecialchars($c['nama_produk']) ?></h6>
+                                    <?php if (!empty($c['varian'])): ?>
+                                        <div class="small text-muted mb-1"><i class="fas fa-tag me-1"></i>Varian: <?= htmlspecialchars($c['varian']) ?></div>
+                                    <?php endif; ?>
                                     <span class="badge bg-light text-muted border fw-normal">Stok: <?= $c['stok'] ?></span>
                                     <?php if ($exceeds_stock): ?>
                                     <div class="text-danger fw-bold mt-1" style="font-size: 0.75rem;"><i class="fas fa-exclamation-triangle me-1"></i>Jumlah melebihi stok!</div>
