@@ -126,8 +126,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_transaksi'])) {
         $_SESSION['upload_msg'] = ['type'=>'error','text'=>'Gagal menyimpan informasi ke database.'];
     }
 
+    if ($ok) {
+        header('Location: ../checkout_success.php?id=' . $id);
+        exit;
+    }
 }
 
-header('Location: ../history.php');
+$ref = $_SERVER['HTTP_REFERER'] ?? '../history.php';
+header('Location: ' . $ref);
 exit;
 ?>

@@ -71,7 +71,7 @@ if (isset($_POST['login'])) {
             <div class="col-md-5">
                 <div class="card border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
                     <div class="card-header bg-sage-dark text-white text-center py-4 border-0">
-                        <h3 class="fw-bold mb-0"><i class="fas fa-leaf"></i> XrivaStore</h3>
+                        <h3 class="fw-bold mb-0"><i class="fas fa-glasses"></i> XrivaStore</h3>
                         <p class="mb-0 small">Silakan masuk ke akun Anda</p>
                     </div>
                     <div class="card-body p-5 bg-white">

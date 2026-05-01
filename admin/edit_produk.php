@@ -18,15 +18,46 @@ if (isset($_POST['edit_produk'])) {
     $deskripsi = trim($_POST['deskripsi']);
     $pilihan_varian = trim($_POST['pilihan_varian'] ?? '');
 
+    $merek = trim($_POST['merek'] ?? '');
+    $asal = trim($_POST['asal'] ?? '');
+    $bahan = trim($_POST['bahan'] ?? '');
+    $bentuk = trim($_POST['bentuk'] ?? '');
+    $jenis_lensa = trim($_POST['jenis_lensa'] ?? '');
+    $jenis_kelamin = trim($_POST['jenis_kelamin'] ?? '-');
+    $spesifikasi_lain = trim($_POST['spesifikasi_lain'] ?? '');
+
+    $sql = "UPDATE produk SET nama_produk=?, kategori=?, harga=?, harga_coret=?, stok=?, deskripsi=?, pilihan_varian=?, merek=?, asal=?, bahan=?, bentuk=?, jenis_lensa=?, jenis_kelamin=?, spesifikasi_lain=?";
+    $params = [$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $pilihan_varian, $merek, $asal, $bahan, $bentuk, $jenis_lensa, $jenis_kelamin, $spesifikasi_lain];
+
     if (!empty($_FILES['gambar']['name'])) {
         $gambar_baru = time() . '_' . basename($_FILES['gambar']['name']);
         move_uploaded_file($_FILES['gambar']['tmp_name'], '../frontend/images/produk/' . $gambar_baru);
-        $conn->prepare("UPDATE produk SET nama_produk=?,kategori=?,harga=?,harga_coret=?,stok=?,deskripsi=?,gambar=?,pilihan_varian=? WHERE id=?")
-             ->execute([$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $gambar_baru, $pilihan_varian, $id_edit]);
-    } else {
-        $conn->prepare("UPDATE produk SET nama_produk=?,kategori=?,harga=?,harga_coret=?,stok=?,deskripsi=?,pilihan_varian=? WHERE id=?")
-             ->execute([$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $pilihan_varian, $id_edit]);
+        $sql .= ", gambar=?";
+        $params[] = $gambar_baru;
     }
+    if (!empty($_FILES['gambar2']['name'])) {
+        $g2 = time() . '_2_' . basename($_FILES['gambar2']['name']);
+        move_uploaded_file($_FILES['gambar2']['tmp_name'], '../frontend/images/produk/' . $g2);
+        $sql .= ", gambar2=?";
+        $params[] = $g2;
+    }
+    if (!empty($_FILES['gambar3']['name'])) {
+        $g3 = time() . '_3_' . basename($_FILES['gambar3']['name']);
+        move_uploaded_file($_FILES['gambar3']['tmp_name'], '../frontend/images/produk/' . $g3);
+        $sql .= ", gambar3=?";
+        $params[] = $g3;
+    }
+    if (!empty($_FILES['gambar4']['name'])) {
+        $g4 = time() . '_4_' . basename($_FILES['gambar4']['name']);
+        move_uploaded_file($_FILES['gambar4']['tmp_name'], '../frontend/images/produk/' . $g4);
+        $sql .= ", gambar4=?";
+        $params[] = $g4;
+    }
+
+    $sql .= " WHERE id=?";
+    $params[] = $id_edit;
+    
+    $conn->prepare($sql)->execute($params);
     header("Location: produk.php?updated=1"); exit;
 }
 
@@ -131,6 +162,46 @@ $active_page = 'produk';
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- Spesifikasi -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small">Merek</label>
+                                    <input type="text" name="merek" class="form-control form-control-sm" placeholder="Kosongkan jika tidak ada" value="<?= htmlspecialchars($p['merek'] ?? '') ?>">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Negara Asal</label>
+                                    <input type="text" name="asal" class="form-control form-control-sm" placeholder="Cth: Indonesia" value="<?= htmlspecialchars($p['asal'] ?? '') ?>">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Bahan Bingkai</label>
+                                    <input type="text" name="bahan" class="form-control form-control-sm" placeholder="Kosongkan jika bukan kacamata" value="<?= htmlspecialchars($p['bahan'] ?? '') ?>">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Bentuk Bingkai</label>
+                                    <input type="text" name="bentuk" class="form-control form-control-sm" placeholder="Kosongkan jika bukan kacamata" value="<?= htmlspecialchars($p['bentuk'] ?? '') ?>">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Jenis Lensa</label>
+                                    <input type="text" name="jenis_lensa" class="form-control form-control-sm" placeholder="Kosongkan jika bukan kacamata" value="<?= htmlspecialchars($p['jenis_lensa'] ?? '') ?>">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Jenis Kelamin</label>
+                                    <select name="jenis_kelamin" class="form-select form-select-sm">
+                                        <option value="-" <?= ($p['jenis_kelamin'] ?? '-') == '-' ? 'selected' : '' ?>>Pilih... (Abaikan jika Aksesoris)</option>
+                                        <option value="Unisex" <?= ($p['jenis_kelamin'] ?? '') == 'Unisex' ? 'selected' : '' ?>>Unisex</option>
+                                        <option value="Pria" <?= ($p['jenis_kelamin'] ?? '') == 'Pria' ? 'selected' : '' ?>>Pria</option>
+                                        <option value="Wanita" <?= ($p['jenis_kelamin'] ?? '') == 'Wanita' ? 'selected' : '' ?>>Wanita</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Spesifikasi Tambahan (Opsional)</label>
+                                <textarea name="spesifikasi_lain" class="form-control form-control-sm" rows="3" placeholder="Contoh:&#10;Kapasitas : 50ml&#10;Aroma : Mint"><?= htmlspecialchars($p['spesifikasi_lain'] ?? '') ?></textarea>
+                                <small class="text-muted" style="font-size: 0.75rem;">Pisahkan nama dan nilai dengan titik dua (:). Satu spesifikasi per baris.</small>
+                            </div>
+
                             <div class="mb-0">
                                 <label class="form-label d-flex justify-content-between">
                                     Deskripsi <span class="char-count" id="charCount"><?= strlen($p['deskripsi']) ?> / 500</span>
@@ -159,6 +230,33 @@ $active_page = 'produk';
                             <div id="newPreviewWrap" class="d-none mt-3">
                                 <p class="small fw-semibold text-muted">Preview foto baru:</p>
                                 <img id="newImgPreview" src="#" class="img-current" alt="preview baru">
+                            </div>
+
+                            <hr>
+                            <p class="small text-muted mb-2 mt-3">Gambar Tambahan:</p>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Gambar Tambahan 1 (Opsional)</label>
+                                <?php if(!empty($p['gambar2'])): ?>
+                                    <div class="mb-2"><img src="../frontend/images/produk/<?= htmlspecialchars($p['gambar2']) ?>" style="height:60px; border-radius:5px; object-fit:cover;"></div>
+                                <?php endif; ?>
+                                <input type="file" name="gambar2" class="form-control form-control-sm" accept="image/*">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Gambar Tambahan 2 (Opsional)</label>
+                                <?php if(!empty($p['gambar3'])): ?>
+                                    <div class="mb-2"><img src="../frontend/images/produk/<?= htmlspecialchars($p['gambar3']) ?>" style="height:60px; border-radius:5px; object-fit:cover;"></div>
+                                <?php endif; ?>
+                                <input type="file" name="gambar3" class="form-control form-control-sm" accept="image/*">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Gambar Tambahan 3 (Opsional)</label>
+                                <?php if(!empty($p['gambar4'])): ?>
+                                    <div class="mb-2"><img src="../frontend/images/produk/<?= htmlspecialchars($p['gambar4']) ?>" style="height:60px; border-radius:5px; object-fit:cover;"></div>
+                                <?php endif; ?>
+                                <input type="file" name="gambar4" class="form-control form-control-sm" accept="image/*">
                             </div>
                         </div>
                     </div>

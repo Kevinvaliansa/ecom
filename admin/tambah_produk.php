@@ -16,13 +16,35 @@ if (isset($_POST['tambah_produk'])) {
     $pilihan_varian = trim($_POST['pilihan_varian'] ?? '');
     $gambar   = 'default.png';
 
+    $merek = trim($_POST['merek'] ?? '');
+    $asal = trim($_POST['asal'] ?? '');
+    $bahan = trim($_POST['bahan'] ?? '');
+    $bentuk = trim($_POST['bentuk'] ?? '');
+    $jenis_lensa = trim($_POST['jenis_lensa'] ?? '');
+    $jenis_kelamin = trim($_POST['jenis_kelamin'] ?? '-');
+    $spesifikasi_lain = trim($_POST['spesifikasi_lain'] ?? '');
+
     if (!empty($_FILES['gambar']['name'])) {
         $gambar = time() . '_' . basename($_FILES['gambar']['name']);
         move_uploaded_file($_FILES['gambar']['tmp_name'], '../frontend/images/produk/' . $gambar);
     }
+    
+    $gambar2 = null; $gambar3 = null; $gambar4 = null;
+    if (!empty($_FILES['gambar2']['name'])) {
+        $gambar2 = time() . '_2_' . basename($_FILES['gambar2']['name']);
+        move_uploaded_file($_FILES['gambar2']['tmp_name'], '../frontend/images/produk/' . $gambar2);
+    }
+    if (!empty($_FILES['gambar3']['name'])) {
+        $gambar3 = time() . '_3_' . basename($_FILES['gambar3']['name']);
+        move_uploaded_file($_FILES['gambar3']['tmp_name'], '../frontend/images/produk/' . $gambar3);
+    }
+    if (!empty($_FILES['gambar4']['name'])) {
+        $gambar4 = time() . '_4_' . basename($_FILES['gambar4']['name']);
+        move_uploaded_file($_FILES['gambar4']['tmp_name'], '../frontend/images/produk/' . $gambar4);
+    }
 
-    $conn->prepare("INSERT INTO produk (nama_produk, kategori, harga, harga_coret, stok, deskripsi, gambar, pilihan_varian) VALUES (?,?,?,?,?,?,?,?)")
-         ->execute([$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $gambar, $pilihan_varian]);
+    $conn->prepare("INSERT INTO produk (nama_produk, kategori, harga, harga_coret, stok, deskripsi, gambar, pilihan_varian, gambar2, gambar3, gambar4, merek, asal, bahan, bentuk, jenis_lensa, jenis_kelamin, spesifikasi_lain) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+         ->execute([$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $gambar, $pilihan_varian, $gambar2, $gambar3, $gambar4, $merek, $asal, $bahan, $bentuk, $jenis_lensa, $jenis_kelamin, $spesifikasi_lain]);
     header("Location: produk.php?added=1"); exit;
 }
 
@@ -119,6 +141,46 @@ $active_page = 'produk';
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- Spesifikasi -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label small">Merek</label>
+                                    <input type="text" name="merek" class="form-control form-control-sm" placeholder="Kosongkan jika tidak ada" value="">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Negara Asal</label>
+                                    <input type="text" name="asal" class="form-control form-control-sm" placeholder="Cth: Indonesia" value="">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Bahan Bingkai</label>
+                                    <input type="text" name="bahan" class="form-control form-control-sm" placeholder="Kosongkan jika bukan kacamata" value="">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Bentuk Bingkai</label>
+                                    <input type="text" name="bentuk" class="form-control form-control-sm" placeholder="Kosongkan jika bukan kacamata" value="">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Jenis Lensa</label>
+                                    <input type="text" name="jenis_lensa" class="form-control form-control-sm" placeholder="Kosongkan jika bukan kacamata" value="">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Jenis Kelamin</label>
+                                    <select name="jenis_kelamin" class="form-select form-select-sm">
+                                        <option value="-" selected>Pilih... (Abaikan jika Aksesoris)</option>
+                                        <option value="Unisex">Unisex</option>
+                                        <option value="Pria">Pria</option>
+                                        <option value="Wanita">Wanita</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Spesifikasi Tambahan (Opsional)</label>
+                                <textarea name="spesifikasi_lain" class="form-control form-control-sm" rows="3" placeholder="Contoh:&#10;Kapasitas : 50ml&#10;Aroma : Mint"></textarea>
+                                <small class="text-muted" style="font-size: 0.75rem;">Pisahkan nama dan nilai dengan titik dua (:). Satu spesifikasi per baris.</small>
+                            </div>
+
                             <div class="mb-0">
                                 <label class="form-label d-flex justify-content-between">
                                     Deskripsi Produk <span class="char-count" id="charCount">0 / 500</span>
@@ -143,11 +205,25 @@ $active_page = 'produk';
                                 <div class="text-muted small mt-1">Format: JPG, PNG, WEBP (Maks 2MB)</div>
                                 <input type="file" name="gambar" id="fileInput" class="d-none" accept="image/*" onchange="previewImage(this)">
                             </div>
-                            <div id="previewWrap" class="d-none text-center">
+                            <div id="previewWrap" class="d-none text-center mb-3">
                                 <img id="imgPreview" src="#" class="rounded w-100 shadow-sm" style="max-height:220px;object-fit:contain;border:1px solid #eee;">
                                 <button type="button" class="btn btn-sm btn-outline-secondary mt-2 rounded-pill" onclick="clearImage()">
                                     <i class="fas fa-times me-1"></i> Ganti Gambar
                                 </button>
+                            </div>
+                            
+                            <hr>
+                            <div class="mb-3 mt-3">
+                                <label class="form-label small fw-bold">Gambar Tambahan 1 (Opsional)</label>
+                                <input type="file" name="gambar2" class="form-control form-control-sm" accept="image/*">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Gambar Tambahan 2 (Opsional)</label>
+                                <input type="file" name="gambar3" class="form-control form-control-sm" accept="image/*">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Gambar Tambahan 3 (Opsional)</label>
+                                <input type="file" name="gambar4" class="form-control form-control-sm" accept="image/*">
                             </div>
                         </div>
                     </div>

@@ -67,7 +67,7 @@ $inisial = isset($_SESSION['user_nama']) ? strtoupper(substr($_SESSION['user_nam
 
     <div class="row g-5">
         <div class="col-md-6">
-            <div class="card border-0 shadow-sm p-3 bg-white position-relative" style="border-radius: 20px;">
+            <div class="card border-0 shadow-sm p-3 bg-white position-relative mb-3" style="border-radius: 20px;">
                 <?php if(isset($p['harga_coret']) && $p['harga_coret'] > $p['harga']): 
                     $persen = round((($p['harga_coret'] - $p['harga']) / $p['harga_coret']) * 100);
                 ?>
@@ -75,8 +75,38 @@ $inisial = isset($_SESSION['user_nama']) ? strtoupper(substr($_SESSION['user_nam
                         <i class="fas fa-bolt me-1"></i> <?= $persen ?>% OFF
                     </div>
                 <?php endif; ?>
-                <img src="frontend/images/produk/<?= htmlspecialchars($p['gambar']) ?>" class="img-fluid" style="border-radius: 15px; width: 100%; height: auto; max-height: 500px; object-fit: cover;">
+                <img id="mainImage" src="frontend/images/produk/<?= htmlspecialchars($p['gambar']) ?>" class="img-fluid" style="border-radius: 15px; width: 100%; height: auto; max-height: 500px; object-fit: cover;">
             </div>
+            
+            <!-- Thumbnails -->
+            <div class="d-flex gap-2 overflow-auto pb-2" style="scrollbar-width: thin;">
+                <img src="frontend/images/produk/<?= htmlspecialchars($p['gambar']) ?>" class="img-thumbnail cursor-pointer border-sage gallery-thumb" style="width: 80px; height: 80px; object-fit: cover; border-width: 2px;" onclick="changeMainImage(this.src, this)">
+                <?php if(!empty($p['gambar2'])): ?>
+                    <img src="frontend/images/produk/<?= htmlspecialchars($p['gambar2']) ?>" class="img-thumbnail cursor-pointer gallery-thumb" style="width: 80px; height: 80px; object-fit: cover;" onclick="changeMainImage(this.src, this)">
+                <?php endif; ?>
+                <?php if(!empty($p['gambar3'])): ?>
+                    <img src="frontend/images/produk/<?= htmlspecialchars($p['gambar3']) ?>" class="img-thumbnail cursor-pointer gallery-thumb" style="width: 80px; height: 80px; object-fit: cover;" onclick="changeMainImage(this.src, this)">
+                <?php endif; ?>
+                <?php if(!empty($p['gambar4'])): ?>
+                    <img src="frontend/images/produk/<?= htmlspecialchars($p['gambar4']) ?>" class="img-thumbnail cursor-pointer gallery-thumb" style="width: 80px; height: 80px; object-fit: cover;" onclick="changeMainImage(this.src, this)">
+                <?php endif; ?>
+            </div>
+            
+            <style>
+                .cursor-pointer { cursor: pointer; }
+                .border-sage { border-color: var(--sage-dark) !important; }
+            </style>
+            <script>
+                function changeMainImage(src, el) {
+                    document.getElementById('mainImage').src = src;
+                    document.querySelectorAll('.gallery-thumb').forEach(img => {
+                        img.classList.remove('border-sage');
+                        img.style.borderWidth = '1px';
+                    });
+                    el.classList.add('border-sage');
+                    el.style.borderWidth = '2px';
+                }
+            </script>
         </div>
 
         <div class="col-md-6">
@@ -237,6 +267,89 @@ $inisial = isset($_SESSION['user_nama']) ? strtoupper(substr($_SESSION['user_nam
                     <a href="index.php?add_wishlist=<?= $p['id'] ?>" class="text-decoration-none text-danger fw-bold">
                         <i class="far fa-heart"></i> Tambah ke Wishlist
                     </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spesifikasi Produk -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="border-radius: 15px; background: #fafafa;">
+                <div class="card-header bg-transparent border-0 pt-4 pb-2 px-4">
+                    <h5 class="fw-bold mb-0 text-dark">Spesifikasi Produk</h5>
+                </div>
+                <div class="card-body p-4 pt-2">
+                    <table class="table table-borderless mb-0" style="max-width: 800px; background: transparent;">
+                        <tbody>
+                            <tr>
+                                <td class="text-muted" style="width: 200px;">Kategori</td>
+                                <td><?= htmlspecialchars($p['kategori']) ?></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Stok</td>
+                                <td class="text-uppercase"><?= $p['stok'] > 0 ? 'Tersedia' : 'Habis' ?></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Merek</td>
+                                <td><?= htmlspecialchars($p['merek'] ?: 'Clarfram') ?></td>
+                            </tr>
+                            <?php if (!empty($p['asal']) && $p['asal'] !== '-'): ?>
+                            <tr>
+                                <td class="text-muted">Negara Asal</td>
+                                <td><?= htmlspecialchars($p['asal']) ?></td>
+                            </tr>
+                            <?php endif; ?>
+                            <?php if (!empty($p['bahan']) && $p['bahan'] !== '-'): ?>
+                            <tr>
+                                <td class="text-muted">Bahan Bingkai</td>
+                                <td><?= htmlspecialchars($p['bahan']) ?></td>
+                            </tr>
+                            <?php endif; ?>
+                            <?php if (!empty($p['bentuk']) && $p['bentuk'] !== '-'): ?>
+                            <tr>
+                                <td class="text-muted">Bentuk Bingkai</td>
+                                <td><?= htmlspecialchars($p['bentuk']) ?></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Tipe Bingkai</td>
+                                <td>Full Rim</td>
+                            </tr>
+                            <?php endif; ?>
+                            <?php if (!empty($p['jenis_lensa']) && $p['jenis_lensa'] !== '-'): ?>
+                            <tr>
+                                <td class="text-muted">Jenis Lensa</td>
+                                <td><?= htmlspecialchars($p['jenis_lensa']) ?></td>
+                            </tr>
+                            <?php endif; ?>
+                            <?php if (!empty($p['jenis_kulit']) && $p['jenis_kulit'] !== '-'): ?>
+                            <tr>
+                                <td class="text-muted">Jenis Kulit</td>
+                                <td><?= htmlspecialchars($p['jenis_kulit']) ?></td>
+                            </tr>
+                            <?php endif; ?>
+                            <?php if (!empty($p['jenis_kelamin']) && $p['jenis_kelamin'] !== '-' && $p['jenis_kelamin'] !== 'Pilih...'): ?>
+                            <tr>
+                                <td class="text-muted">Jenis Kelamin</td>
+                                <td><?= htmlspecialchars($p['jenis_kelamin']) ?></td>
+                            </tr>
+                            <?php endif; ?>
+                            <?php 
+                            if (!empty($p['spesifikasi_lain'])) {
+                                $lines = explode("\n", $p['spesifikasi_lain']);
+                                foreach ($lines as $line) {
+                                    $parts = explode(':', $line, 2);
+                                    if (count($parts) === 2) {
+                                        echo '<tr>';
+                                        echo '<td class="text-muted">' . htmlspecialchars(trim($parts[0])) . '</td>';
+                                        echo '<td>' . htmlspecialchars(trim($parts[1])) . '</td>';
+                                        echo '</tr>';
+                                    }
+                                }
+                            }
+                            ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

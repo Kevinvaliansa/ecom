@@ -109,23 +109,14 @@ if (isset($_POST['buat_pesanan'])) {
 
         $conn->commit();
 
-        $redirect = ($metode == 'COD') ? 'history.php' : 'upload_after_checkout.php?id=' . $id_transaksi;
-
-        echo "<!DOCTYPE html><html><head>
-                <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-                <script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
-              </head>
-              <body style='background-color:#f4f7f6;'>
-              <script>
-                Swal.fire({
-                    title: 'Yeay! Pesanan Berhasil 🎉',
-                    text: 'Pesanan kamu telah dibuat. Total: Rp " . number_format($final_total, 0, ',', '.') . "',
-                    icon: 'success',
-                    confirmButtonColor: '#4a7c6b',
-                    confirmButtonText: 'Lanjut'
-                }).then(() => { window.location.href = '{$redirect}'; });
-              </script></body></html>";
-        exit;
+        if ($metode == 'COD') {
+            $_SESSION['upload_msg'] = ['type' => 'success', 'text' => 'Pesanan kamu telah berhasil dibuat.'];
+            header("Location: checkout_success.php?id=" . $id_transaksi);
+            exit;
+        } else {
+            header("Location: upload_after_checkout.php?id=" . $id_transaksi);
+            exit;
+        }
 
     } catch (Exception $e) {
         if ($conn->inTransaction()) $conn->rollBack();

@@ -61,7 +61,7 @@ if (isset($_POST['register'])) {
         <div class="col-md-6 col-lg-5">
             <div class="card border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
                 <div class="card-header bg-sage-dark text-white text-center py-4 border-0">
-                    <h3 class="fw-bold mb-0"><i class="fas fa-leaf me-2"></i> XrivaStore</h3>
+                    <h3 class="fw-bold mb-0"><i class="fas fa-glasses me-2"></i> XrivaStore</h3>
                     <p class="mb-0 small opacity-75">Buat akun baru</p>
                 </div>
                 <div class="card-body p-4 p-md-5 bg-white">

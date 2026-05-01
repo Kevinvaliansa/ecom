@@ -189,7 +189,7 @@ for ($i = 6; $i >= 0; $i--) {
 <!-- ===== SIDEBAR ===== -->
 <div class="sidebar">
     <div class="sidebar-brand">
-        <h4><i class="fas fa-leaf me-2" style="color:var(--sage-pale)"></i>XrivaStore</h4>
+        <h4><i class="fas fa-glasses me-2" style="color:var(--sage-pale)"></i>XrivaStore</h4>
         <small>Admin Panel</small>
     </div>
     <nav class="sidebar-nav">

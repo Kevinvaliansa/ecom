@@ -12,7 +12,7 @@ $admin_initial = strtoupper(substr($admin_name, 0, 1));
 <!-- ===== SHARED ADMIN SIDEBAR ===== -->
 <div class="sidebar">
     <div class="sidebar-brand">
-        <h4><i class="fas fa-leaf me-2" style="color:#cad2c5"></i>XrivaStore</h4>
+        <h4><i class="fas fa-glasses me-2" style="color:#cad2c5"></i>XrivaStore</h4>
         <small>Admin Panel</small>
     </div>
     <nav class="sidebar-nav">

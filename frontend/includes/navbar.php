@@ -17,7 +17,7 @@ if (isset($_SESSION['user_id']) && isset($conn)) {
 <nav class="navbar navbar-expand-lg navbar-dark navbar-sage sticky-top shadow-sm py-2">
     <div class="container">
         <a class="navbar-brand fw-bold fs-4" href="index.php">
-            <i class="fas fa-leaf me-1"></i> XrivaStore
+            <i class="fas fa-glasses me-1"></i> XrivaStore
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false">
             <span class="navbar-toggler-icon"></span>
