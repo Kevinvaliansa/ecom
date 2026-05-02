@@ -129,7 +129,12 @@ $cart_list = $stmt->fetchAll();
 <?php include 'frontend/includes/navbar.php'; ?>
 
     <div class="container my-5 pb-5">
-        <h3 class="fw-bold text-dark mb-4"><i class="fas fa-shopping-cart me-2" style="color: var(--xriva-primary);"></i> Keranjang Belanja</h3>
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h3 class="fw-bold text-dark mb-0"><i class="fas fa-shopping-cart me-2" style="color: var(--xriva-primary);"></i> Keranjang Belanja</h3>
+            <a href="index.php" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                <i class="fas fa-arrow-left me-1"></i> Lanjut Belanja
+            </a>
+        </div>
 
         <form action="checkout.php" method="POST" id="form-checkout">
             <div class="mb-3 d-flex align-items-center gap-3">

@@ -2,11 +2,16 @@
 session_start();
 require_once 'backend/config/database.php';
 
-// Cek login
-if (!isset($_SESSION['user_id'])) {
-    echo "<script>alert('Silakan login terlebih dahulu untuk melihat detail produk!'); window.location.href='login.php';</script>";
-    exit;
+if (!function_exists('maskUsername')) {
+    function maskUsername($name) {
+        if (empty($name)) return "A***m";
+        if (strlen($name) <= 2) return $name . "***";
+        return substr($name, 0, 1) . "***" . substr($name, -1);
+    }
 }
+
+// Guest diperbolehkan lihat detail produk
+$is_logged_in = isset($_SESSION['user_id']);
 
 // AMBIL ID PRODUK DARI URL
 if (!isset($_GET['id'])) {
@@ -31,8 +36,13 @@ $stmtR = $conn->prepare("SELECT AVG(rating) as avg_rating, COUNT(*) as cnt FROM 
 $stmtR->execute([$id_produk]);
 $rinfo = $stmtR->fetch();
 
+// ambil jumlah terjual
+$stmtSold = $conn->prepare("SELECT COALESCE(SUM(jumlah), 0) FROM detail_transaksi WHERE id_produk = ?");
+$stmtSold->execute([$id_produk]);
+$total_terjual = $stmtSold->fetchColumn();
+
 // ambil beberapa review terbaru
-$stmtReviews = $conn->prepare("SELECT r.*, u.nama as user_nama FROM ratings r LEFT JOIN users u ON u.id = r.id_user WHERE r.id_produk = ? ORDER BY r.created_at DESC LIMIT 10");
+$stmtReviews = $conn->prepare("SELECT r.*, u.nama as user_nama FROM ratings r LEFT JOIN users u ON u.id = r.id_user WHERE r.id_produk = ? ORDER BY r.created_at DESC LIMIT 50");
 $stmtReviews->execute([$id_produk]);
 $reviews = $stmtReviews->fetchAll();
 
@@ -142,8 +152,16 @@ $inisial = isset($_SESSION['user_nama']) ? strtoupper(substr($_SESSION['user_nam
                                 Belum ada rating
                             <?php endif; ?>
                         </span>
+                        <span class="text-muted small ms-1">(<?= $rinfo['cnt'] ?> ulasan)</span>
                     </div>
-                    <div class="text-muted small">(<?= $rinfo['cnt'] ?? 0 ?> ulasan)</div>
+                    
+                    <?php if ($total_terjual > 0): ?>
+                    <div class="border-start ps-3">
+                        <span class="text-muted small">
+                            <i class="fas fa-shopping-bag text-sage-dark me-1"></i> Terjual <strong><?= $total_terjual ?></strong>
+                        </span>
+                    </div>
+                    <?php endif; ?>
                 </div>
                 <div class="mb-4">
                     <h6 class="fw-bold text-muted text-uppercase small mb-2">Deskripsi Produk</h6>
@@ -191,6 +209,8 @@ $inisial = isset($_SESSION['user_nama']) ? strtoupper(substr($_SESSION['user_nam
                         </div>
                     </div>
                     <div class="col-md-8 d-flex align-items-end gap-2">
+
+                        <?php if ($is_logged_in): ?>
                         <!-- Form Tambah ke Keranjang -->
                         <form action="cart.php" method="POST" class="w-50" onsubmit="return validateVarian()">
                             <input type="hidden" name="id_produk" value="<?= $p['id'] ?>">
@@ -200,7 +220,7 @@ $inisial = isset($_SESSION['user_nama']) ? strtoupper(substr($_SESSION['user_nam
                                 <i class="fas fa-cart-plus me-1"></i> Keranjang
                             </button>
                         </form>
-                        
+
                         <!-- Form Beli Langsung (Direct Checkout) -->
                         <form action="checkout.php" method="POST" class="w-50" onsubmit="return validateVarian()">
                             <input type="hidden" name="direct_buy_id" value="<?= $p['id'] ?>">
@@ -210,6 +230,17 @@ $inisial = isset($_SESSION['user_nama']) ? strtoupper(substr($_SESSION['user_nam
                                 Beli Langsung
                             </button>
                         </form>
+
+                        <?php else: ?>
+                        <!-- Guest: tombol redirect ke login -->
+                        <button type="button" class="btn btn-lg w-50 fw-bold py-3 shadow-sm" onclick="requireLogin()" <?= ($p['stok'] <= 0) ? 'disabled' : '' ?> style="border: 2px solid var(--xriva-primary); color: var(--xriva-primary); background: white;">
+                            <i class="fas fa-cart-plus me-1"></i> Keranjang
+                        </button>
+                        <button type="button" class="btn btn-sage btn-lg w-50 fw-bold py-3 shadow-sm" onclick="requireLogin()" <?= ($p['stok'] <= 0) ? 'disabled' : '' ?>>
+                            Beli Langsung
+                        </button>
+                        <?php endif; ?>
+
                     </div>
                 </div>
 
@@ -226,18 +257,15 @@ $inisial = isset($_SESSION['user_nama']) ? strtoupper(substr($_SESSION['user_nam
 
                 <script>
                     function selectVarian(btn, val) {
-                        // Remove active class from all buttons
                         document.querySelectorAll('.btn-varian').forEach(b => b.classList.remove('active'));
-                        // Add active class to clicked button
                         btn.classList.add('active');
-                        // Update hidden inputs
                         document.getElementById('selectedVarian').value = val;
                         document.querySelectorAll('.input-varian-hidden').forEach(inp => inp.value = val);
                     }
 
                     function validateVarian() {
                         const hasVarian = <?= !empty($p['pilihan_varian']) ? 'true' : 'false' ?>;
-                        const selected = document.getElementById('selectedVarian').value;
+                        const selected = document.getElementById('selectedVarian') ? document.getElementById('selectedVarian').value : '';
                         if (hasVarian && !selected) {
                             Swal.fire({
                                 icon: 'warning',
@@ -255,18 +283,41 @@ $inisial = isset($_SESSION['user_nama']) ? strtoupper(substr($_SESSION['user_nam
                         const cartInp = document.getElementById('cartQty');
                         const checkoutInp = document.getElementById('checkoutQty');
                         let val = parseInt(qtyInp.value) + amt;
-                        if (val >= 1 && val <= <?= $p['stok'] ?>) {
+                        const maxStok = <?= $p['stok'] ?>;
+                        if (val >= 1 && val <= maxStok) {
                             qtyInp.value = val;
-                            cartInp.value = val;
-                            checkoutInp.value = val;
+                            if (cartInp) cartInp.value = val;
+                            if (checkoutInp) checkoutInp.value = val;
                         }
+                    }
+
+                    function requireLogin() {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Login Diperlukan',
+                            text: 'Silakan login terlebih dahulu untuk melakukan transaksi.',
+                            confirmButtonColor: '#4a7c6b',
+                            confirmButtonText: 'Login Sekarang',
+                            showCancelButton: true,
+                            cancelButtonText: 'Nanti'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                window.location.href = 'login.php';
+                            }
+                        });
                     }
                 </script>
 
                 <div class="mt-4">
+                    <?php if ($is_logged_in): ?>
                     <a href="index.php?add_wishlist=<?= $p['id'] ?>" class="text-decoration-none text-danger fw-bold">
                         <i class="far fa-heart"></i> Tambah ke Wishlist
                     </a>
+                    <?php else: ?>
+                    <a href="javascript:void(0)" onclick="requireLogin()" class="text-decoration-none text-danger fw-bold">
+                        <i class="far fa-heart"></i> Tambah ke Wishlist
+                    </a>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -356,11 +407,135 @@ $inisial = isset($_SESSION['user_nama']) ? strtoupper(substr($_SESSION['user_nam
     </div>
 </div>
 
+</div>
+
+<!-- User Reviews Section -->
+<div class="mt-5 pt-4 border-top">
+    <div class="bg-light p-4 rounded-4 shadow-sm border">
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div class="d-flex align-items-center">
+                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-comments text-sage-dark me-2"></i> Ulasan Pembeli</h5>
+                <?php if ($rinfo['cnt'] > 0): ?>
+                    <span class="badge bg-white text-dark ms-3 border border-secondary-subtle rounded-pill px-3 py-2" style="font-size:0.85rem;">
+                        <?= number_format($rinfo['avg_rating'], 1) ?> <i class="fas fa-star text-warning"></i> dari <?= $rinfo['cnt'] ?> Ulasan
+                    </span>
+                <?php endif; ?>
+            </div>
+            
+            <?php if (count($reviews) > 4): ?>
+                <button type="button" class="btn btn-sm btn-outline-sage rounded-pill px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#modalAllReviews">
+                    Lihat Semua (<?= $rinfo['cnt'] ?>)
+                </button>
+            <?php endif; ?>
+        </div>
+
+        <?php if (count($reviews) > 0): ?>
+            <div class="row g-3">
+                <?php 
+                $count = 0;
+                foreach ($reviews as $rev): 
+                    $count++;
+                    if($count > 4) break;
+                    $maskedName = maskUsername($rev['user_nama']);
+                ?>
+                    <div class="col-12">
+                        <div class="d-flex p-3 rounded-4 bg-white shadow-sm border" style="border-left: 4px solid var(--xriva-primary) !important;">
+                            <!-- Avatar -->
+                            <div class="rounded-circle d-flex justify-content-center align-items-center flex-shrink-0" 
+                                 style="width: 45px; height: 45px; background: linear-gradient(135deg, var(--xriva-dark), var(--xriva-primary)); color: white; font-weight: bold; font-size:1.2rem;">
+                                <?= strtoupper(substr($rev['user_nama'] ?? 'User', 0, 1)) ?>
+                            </div>
+                            
+                            <!-- Konten Review -->
+                            <div class="ms-3 flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <div>
+                                        <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.95rem;"><?= htmlspecialchars($maskedName) ?></h6>
+                                        <div class="text-warning mt-1" style="font-size: 0.8rem;">
+                                            <?php for($i=1; $i<=5; $i++): ?>
+                                                <i class="<?= $i <= $rev['rating'] ? 'fas' : 'far' ?> fa-star"></i>
+                                            <?php endfor; ?>
+                                        </div>
+                                    </div>
+                                    <span class="text-muted" style="font-size: 0.75rem;"><i class="far fa-clock me-1"></i> <?= date('d M Y', strtotime($rev['created_at'])) ?></span>
+                                </div>
+                                
+                                <p class="mb-0 mt-2 text-secondary small" style="line-height: 1.6; font-size: 0.9rem;">
+                                    <?= nl2br(htmlspecialchars($rev['review'] ?? 'Tidak ada ulasan teks.')) ?>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="text-center py-5 text-muted bg-white rounded-4 border" style="border-style: dashed !important;">
+                <i class="far fa-comment-dots fa-3x mb-3" style="opacity: 0.4;"></i>
+                <h6 class="fw-bold mb-1">Belum ada ulasan</h6>
+                <p class="small mb-0">Jadilah yang pertama memiliki dan mengulas produk ini.</p>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Modal Semua Ulasan -->
+<div class="modal fade" id="modalAllReviews" tabindex="-1" aria-labelledby="modalAllReviewsLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow" style="border-radius: 20px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="modalAllReviewsLabel">
+                    <i class="fas fa-comments text-sage-dark me-2"></i> Semua Ulasan Produk
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <?php foreach ($reviews as $rev): 
+                        $maskedName = maskUsername($rev['user_nama']);
+                    ?>
+                        <div class="col-12">
+                            <div class="d-flex p-3 rounded-4 bg-light border shadow-sm" style="border-left: 4px solid var(--xriva-primary) !important;">
+                                <!-- Avatar -->
+                                <div class="rounded-circle d-flex justify-content-center align-items-center flex-shrink-0" 
+                                     style="width: 45px; height: 45px; background: linear-gradient(135deg, var(--xriva-dark), var(--xriva-primary)); color: white; font-weight: bold; font-size:1.2rem;">
+                                    <?= strtoupper(substr($rev['user_nama'] ?? 'User', 0, 1)) ?>
+                                </div>
+                                
+                                <!-- Konten Review -->
+                                <div class="ms-3 flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <div>
+                                            <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.95rem;"><?= htmlspecialchars($maskedName) ?></h6>
+                                            <div class="text-warning mt-1" style="font-size: 0.8rem;">
+                                                <?php for($i=1; $i<=5; $i++): ?>
+                                                    <i class="<?= $i <= $rev['rating'] ? 'fas' : 'far' ?> fa-star"></i>
+                                                <?php endfor; ?>
+                                            </div>
+                                        </div>
+                                        <span class="text-muted" style="font-size: 0.75rem;"><i class="far fa-clock me-1"></i> <?= date('d M Y', strtotime($rev['created_at'])) ?></span>
+                                    </div>
+                                    
+                                    <p class="mb-0 mt-2 text-secondary small" style="line-height: 1.6; font-size: 0.9rem;">
+                                        <?= nl2br(htmlspecialchars($rev['review'] ?? 'Tidak ada ulasan teks.')) ?>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <?php if (!empty($related_products)): ?>
-<div class="container pb-5">
+<div class="container mt-5 pt-4 pb-5 border-top">
     <h5 class="fw-bold text-dark mb-4">
         <i class="fas fa-glasses me-2 text-sage-dark"></i> Produk Serupa
     </h5>

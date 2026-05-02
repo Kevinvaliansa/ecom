@@ -28,7 +28,7 @@ if (isset($_GET['hapus'])) {
     header("Location: wishlist.php"); exit;
 }
 
-$stmt = $conn->prepare("SELECT w.id as id_wishlist, p.id as id_produk, p.nama_produk, p.harga, p.gambar, p.stok 
+$stmt = $conn->prepare("SELECT w.id as id_wishlist, p.id as id_produk, p.nama_produk, p.harga, p.harga_coret, p.gambar, p.stok, p.kategori
                         FROM wishlist w JOIN produk p ON w.id_produk = p.id WHERE w.id_user = ?");
 $stmt->execute([$id_user]);
 $wishlist_items = $stmt->fetchAll();
@@ -39,49 +39,95 @@ $inisial = strtoupper(substr($_SESSION['user_nama'], 0, 1));
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wishlist - XrivaStore</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="frontend/css/style.css">
+    <link rel="stylesheet" href="frontend/css/style.css?v=<?= time() ?>">
 </head>
 <body class="bg-light">
 
     <?php include 'frontend/includes/navbar.php'; ?>
-    <div class="container my-5 pb-5">
-        <h3 class="mb-4 text-sage-dark fw-bold"><i class="fas fa-heart text-danger"></i> Wishlist Saya</h3>
 
-        <div class="row">
-            <?php if(count($wishlist_items) > 0): ?>
-                <?php foreach($wishlist_items as $item): ?>
+    <div class="container my-5 pb-5">
+
+        <!-- Page Header -->
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h3 class="fw-bold text-dark mb-0">
+                <i class="fas fa-heart text-danger me-2"></i> Wishlist Saya
+                <?php if (count($wishlist_items) > 0): ?>
+                    <span class="badge rounded-pill ms-2" style="background: var(--xriva-light); color: var(--xriva-dark); font-size: 0.85rem; font-weight: 600;">
+                        <?= count($wishlist_items) ?> produk
+                    </span>
+                <?php endif; ?>
+            </h3>
+            <a href="index.php" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                <i class="fas fa-arrow-left me-1"></i> Lanjut Belanja
+            </a>
+        </div>
+
+        <div class="row" id="daftar-produk">
+            <?php if (count($wishlist_items) > 0): ?>
+                <?php foreach ($wishlist_items as $item): ?>
+                <?php
+                    $has_diskon = isset($item['harga_coret']) && $item['harga_coret'] > $item['harga'];
+                    $persen = $has_diskon ? round((($item['harga_coret'] - $item['harga']) / $item['harga_coret']) * 100) : 0;
+                ?>
                 <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                    <div class="card h-100 shadow-sm border-0 position-relative bg-white" style="border-radius: 16px;">
-                        
-                        <a href="wishlist.php?hapus=<?= $item['id_wishlist'] ?>" class="btn btn-light text-danger position-absolute rounded-circle shadow-sm" style="top: 10px; right: 10px; width: 35px; height: 35px; padding: 5px; z-index: 2;" title="Hapus dari Wishlist">
-                            <i class="fas fa-times mt-1"></i>
+                    <div class="product-card position-relative">
+
+                        <!-- Tombol hapus wishlist -->
+                        <a href="wishlist.php?hapus=<?= $item['id_wishlist'] ?>"
+                           class="btn btn-light text-danger position-absolute rounded-circle shadow-sm"
+                           style="top: 10px; right: 10px; width: 35px; height: 35px; padding: 0; z-index: 10; display: flex; align-items: center; justify-content: center;"
+                           title="Hapus dari Wishlist"
+                           onclick="return confirm('Hapus dari Wishlist?')">
+                            <i class="fas fa-heart"></i>
                         </a>
 
-                        <div style="overflow: hidden; border-top-left-radius: 16px; border-top-right-radius: 16px; height: 200px; background: #f8f9fa; display:flex; align-items:center; justify-content:center;">
-                            <img src="frontend/images/produk/<?= htmlspecialchars($item['gambar']) ?>" class="card-img-top" style="max-height: 200px; width: auto; max-width: 100%; object-fit: contain; <?= $item['stok'] <= 0 ? 'filter: grayscale(100%); opacity: 0.6;' : '' ?>">
-                        </div>
-                        
-                        <div class="card-body d-flex flex-column p-4 text-center">
-                            <h6 class="card-title fw-bold text-dark text-truncate mb-1"><?= htmlspecialchars($item['nama_produk']) ?></h6>
-                            <h5 class="card-text text-sage-dark fw-bold mb-2">Rp <?= number_format($item['harga'], 0, ',', '.') ?></h5>
-                            
-                            <?php if($item['stok'] > 0): ?>
-                                <small class="text-muted mb-4"><i class="fas fa-box-open me-1"></i> Sisa <?= $item['stok'] ?> Pcs</small>
-                            <?php else: ?>
-                                <small class="text-danger fw-bold mb-4"><i class="fas fa-times-circle me-1"></i> Stok Habis</small>
+                        <div class="img-wrap">
+                            <?php if ($has_diskon): ?>
+                                <div class="discount-badge">
+                                    <i class="fas fa-bolt me-1"></i> <?= $persen ?>% OFF
+                                </div>
                             <?php endif; ?>
-                            
-                            <form action="cart.php" method="POST" class="mt-auto w-100">
-                                <input type="hidden" name="id_produk" value="<?= $item['id_produk'] ?>">
-                                <input type="hidden" name="qty" value="1">
-                                <button type="submit" name="add_to_cart" class="btn btn-sage w-100 fw-bold" <?= $item['stok'] == 0 ? 'disabled' : '' ?>>
-                                    <i class="fas fa-cart-arrow-down"></i> Pindah ke Keranjang
-                                </button>
-                            </form>
+                            <a href="detail.php?id=<?= $item['id_produk'] ?>">
+                                <img src="frontend/images/produk/<?= htmlspecialchars($item['gambar']) ?>"
+                                     class="<?= $item['stok'] <= 0 ? 'img-out-of-stock' : '' ?>"
+                                     alt="<?= htmlspecialchars($item['nama_produk']) ?>">
+                            </a>
                         </div>
+
+                        <div class="product-info">
+                            <span class="category"><?= htmlspecialchars($item['kategori'] ?? 'Kacamata') ?></span>
+                            <a href="detail.php?id=<?= $item['id_produk'] ?>" class="text-decoration-none">
+                                <h6 class="product-name"><?= htmlspecialchars($item['nama_produk']) ?></h6>
+                            </a>
+
+                            <div class="d-flex justify-content-between align-items-center mt-auto">
+                                <div class="product-price">
+                                    <?php if ($has_diskon): ?>
+                                        <div class="text-muted text-decoration-line-through" style="font-size: 0.75rem;">Rp <?= number_format($item['harga_coret'], 0, ',', '.') ?></div>
+                                    <?php endif; ?>
+                                    Rp <?= number_format($item['harga'], 0, ',', '.') ?>
+                                </div>
+
+                                <?php if ($item['stok'] > 0): ?>
+                                    <form action="cart.php" method="POST" style="margin: 0;">
+                                        <input type="hidden" name="id_produk" value="<?= $item['id_produk'] ?>">
+                                        <input type="hidden" name="qty" value="1">
+                                        <button type="submit" name="add_to_cart"
+                                                class="btn-buy-now px-3 py-1 text-decoration-none small border-0"
+                                                title="Pindah ke Keranjang">
+                                            <i class="fas fa-cart-arrow-down"></i>
+                                        </button>
+                                    </form>
+                                <?php else: ?>
+                                    <span class="badge bg-danger">Habis</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -97,6 +143,13 @@ $inisial = strtoupper(substr($_SESSION['user_nama'], 0, 1));
             <?php endif; ?>
         </div>
     </div>
+
+    <footer class="text-white text-center py-4 mt-5" style="background-color: var(--xriva-dark);">
+        <div class="container">
+            <h5 class="fw-bold mb-2"><i class="fas fa-glasses"></i> Xriva Eyewear</h5>
+            <p class="mb-2 small">&copy; <?= date('Y') ?> Xriva Eyewear. All Rights Reserved.</p>
+        </div>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

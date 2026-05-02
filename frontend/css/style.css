@@ -108,6 +108,11 @@ body {
     transform: scale(1.1);
 }
 
+.img-out-of-stock {
+    filter: grayscale(100%);
+    opacity: 0.6;
+}
+
 /* --- DETAIL PRODUK DI CARD --- */
 .product-info {
     padding: 12px;
@@ -288,12 +293,36 @@ body {
 .bg-sage-dark    { background-color: var(--xriva-dark)    !important; }
 .bg-sage-primary { background-color: var(--xriva-primary) !important; }
 
-/* --- NAVBAR ACTIVE LINK --- */
+/* --- NAVBAR ACTIVE LINK & ANIMATED UNDERLINE --- */
+.navbar-sage .nav-link {
+    position: relative;
+    color: rgba(255,255,255,0.85) !important;
+    transition: color 0.25s ease;
+}
+.navbar-sage .nav-link:hover {
+    color: #ffffff !important;
+}
 .navbar-sage .nav-link.active {
     font-weight: 700;
     color: #ffffff !important;
-    border-bottom: 2px solid rgba(255,255,255,0.6);
-    padding-bottom: 2px;
+}
+
+/* Sliding pill indicator — satu-satunya garis */
+#nav-slider {
+    position: absolute;
+    bottom: 0;
+    height: 2px;
+    background: #ffffff;
+    border-radius: 2px;
+    transition: left 0.35s cubic-bezier(0.4,0,0.2,1),
+                width 0.35s cubic-bezier(0.4,0,0.2,1),
+                opacity 0.25s ease;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 10;
+}
+#nav-slider.visible {
+    opacity: 1;
 }
 
 /* --- BACK TO TOP BUTTON --- */
@@ -420,4 +449,27 @@ body {
     color: white;
     transform: translateY(-2px);
 }
-
+
+/* --- CUSTOM STAR RATING FORM --- */
+.star-rating-form {
+    display: inline-flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    gap: 0.15rem;
+}
+.star-rating-form input[type="radio"] {
+    display: none;
+}
+.star-rating-form label {
+    cursor: pointer;
+    font-size: 1.5rem;
+    color: #e4e5e9;
+    transition: color 0.2s;
+}
+.star-rating-form input[type="radio"]:checked ~ label {
+    color: #ffc107;
+}
+.star-rating-form label:hover,
+.star-rating-form label:hover ~ label {
+    color: #ffc107;
+}

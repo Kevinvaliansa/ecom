@@ -30,8 +30,11 @@ if (isset($_GET['add_wishlist'])) {
 $kategori_filter = $_GET['kategori'] ?? '';
 $cari = $_GET['cari'] ?? '';
 
-$query = "SELECT * FROM produk WHERE 1=1";
-$queryCount = "SELECT COUNT(*) FROM produk WHERE 1=1";
+$query = "SELECT p.*, 
+          (SELECT COALESCE(SUM(jumlah), 0) FROM detail_transaksi dt WHERE dt.id_produk = p.id) as terjual,
+          (SELECT COALESCE(AVG(rating), 0) FROM ratings r WHERE r.id_produk = p.id) as avg_rating
+          FROM produk p WHERE 1=1";
+$queryCount = "SELECT COUNT(*) FROM produk p WHERE 1=1";
 $params = [];
 
 if ($kategori_filter) {
@@ -56,7 +59,20 @@ if ($page < 1) $page = 1;
 $offset = ($page - 1) * $limit;
 $total_pages = ceil($total_data / $limit);
 
-$query .= " ORDER BY id DESC LIMIT $limit OFFSET $offset";
+$sort = $_GET['sort'] ?? 'terbaru';
+$order_by = "ORDER BY id DESC"; // default: terbaru
+
+if ($sort === 'termurah') {
+    $order_by = "ORDER BY harga ASC";
+} elseif ($sort === 'termahal') {
+    $order_by = "ORDER BY harga DESC";
+} elseif ($sort === 'terlaris') {
+    $order_by = "ORDER BY (SELECT COALESCE(SUM(jumlah), 0) FROM detail_transaksi WHERE detail_transaksi.id_produk = p.id) DESC";
+} elseif ($sort === 'rating') {
+    $order_by = "ORDER BY (SELECT COALESCE(AVG(rating), 0) FROM ratings WHERE ratings.id_produk = p.id) DESC";
+}
+
+$query .= " $order_by LIMIT $limit OFFSET $offset";
 
 $stmt = $conn->prepare($query);
 $stmt->execute($params);
@@ -140,12 +156,40 @@ $produk_list = $stmt->fetchAll();
         </div>
         <?php endif; ?>
 
-        <div class="d-flex justify-content-center gap-3 overflow-auto pb-3 mb-4 kategori-scroll">
-            <a href="index.php" class="category-pill <?= !$kategori_filter ? 'active' : '' ?>">Semua Koleksi</a>
-            <a href="index.php?kategori=Kacamata Gaya" class="category-pill <?= $kategori_filter == 'Kacamata Gaya' ? 'active' : '' ?>">Kacamata Gaya</a>
-            <a href="index.php?kategori=Kacamata Minus" class="category-pill <?= $kategori_filter == 'Kacamata Minus' ? 'active' : '' ?>">Kacamata Minus</a>
-            <a href="index.php?kategori=Kacamata Plus" class="category-pill <?= $kategori_filter == 'Kacamata Plus' ? 'active' : '' ?>">Kacamata Plus</a>
-            <a href="index.php?kategori=Aksesoris" class="category-pill <?= $kategori_filter == 'Aksesoris' ? 'active' : '' ?>">Aksesoris & Kotak</a>
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+            <div class="d-flex gap-2 overflow-auto pb-2 kategori-scroll" style="flex-wrap: nowrap;">
+                <a href="index.php?<?= http_build_query(array_merge($_GET, ['kategori' => ''])) ?>" class="category-pill <?= !$kategori_filter ? 'active' : '' ?>">Semua Koleksi</a>
+                <a href="index.php?<?= http_build_query(array_merge($_GET, ['kategori' => 'Kacamata Gaya'])) ?>" class="category-pill <?= $kategori_filter == 'Kacamata Gaya' ? 'active' : '' ?>">Kacamata Gaya</a>
+                <a href="index.php?<?= http_build_query(array_merge($_GET, ['kategori' => 'Kacamata Minus'])) ?>" class="category-pill <?= $kategori_filter == 'Kacamata Minus' ? 'active' : '' ?>">Kacamata Minus</a>
+                <a href="index.php?<?= http_build_query(array_merge($_GET, ['kategori' => 'Kacamata Plus'])) ?>" class="category-pill <?= $kategori_filter == 'Kacamata Plus' ? 'active' : '' ?>">Kacamata Plus</a>
+                <a href="index.php?<?= http_build_query(array_merge($_GET, ['kategori' => 'Aksesoris'])) ?>" class="category-pill <?= $kategori_filter == 'Aksesoris' ? 'active' : '' ?>">Aksesoris & Kotak</a>
+            </div>
+            
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary rounded-pill dropdown-toggle btn-sm px-3 shadow-sm" type="button" data-bs-toggle="dropdown" style="background-color: white;">
+                    <i class="fas fa-sort-amount-down me-1 text-sage-dark"></i> 
+                    <span class="d-inline-block">
+                    <?php
+                        $sort_labels = [
+                            'terbaru' => 'Terbaru',
+                            'termurah' => 'Harga: Termurah',
+                            'termahal' => 'Harga: Termahal',
+                            'terlaris' => 'Paling Laris',
+                            'rating' => 'Rating Tertinggi'
+                        ];
+                        echo array_key_exists($sort, $sort_labels) ? $sort_labels[$sort] : 'Urutkan';
+                    ?>
+                    </span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="border-radius: 12px; min-width: 200px;">
+                    <li><h6 class="dropdown-header fw-bold text-sage-dark">Urutkan Berdasarkan</h6></li>
+                    <li><a class="dropdown-item py-2 <?= $sort == 'terbaru' ? 'active bg-sage-light text-sage-dark fw-bold' : '' ?>" href="?<?= http_build_query(array_merge($_GET, ['sort' => 'terbaru', 'page' => 1])) ?>">Terbaru</a></li>
+                    <li><a class="dropdown-item py-2 <?= $sort == 'termurah' ? 'active bg-sage-light text-sage-dark fw-bold' : '' ?>" href="?<?= http_build_query(array_merge($_GET, ['sort' => 'termurah', 'page' => 1])) ?>">Harga: Termurah</a></li>
+                    <li><a class="dropdown-item py-2 <?= $sort == 'termahal' ? 'active bg-sage-light text-sage-dark fw-bold' : '' ?>" href="?<?= http_build_query(array_merge($_GET, ['sort' => 'termahal', 'page' => 1])) ?>">Harga: Termahal</a></li>
+                    <li><a class="dropdown-item py-2 <?= $sort == 'terlaris' ? 'active bg-sage-light text-sage-dark fw-bold' : '' ?>" href="?<?= http_build_query(array_merge($_GET, ['sort' => 'terlaris', 'page' => 1])) ?>">Paling Laris</a></li>
+                    <li><a class="dropdown-item py-2 <?= $sort == 'rating' ? 'active bg-sage-light text-sage-dark fw-bold' : '' ?>" href="?<?= http_build_query(array_merge($_GET, ['sort' => 'rating', 'page' => 1])) ?>">Rating Tertinggi</a></li>
+                </ul>
+            </div>
         </div>
         
         <div class="row" id="daftar-produk">
@@ -177,6 +221,20 @@ $produk_list = $stmt->fetchAll();
                             <a href="detail.php?id=<?= $p['id'] ?>" class="text-decoration-none">
                                 <h6 class="product-name"><?= htmlspecialchars($p['nama_produk']) ?></h6>
                             </a>
+                            
+                            <div class="d-flex align-items-center mb-2" style="font-size: 0.75rem;">
+                                <?php if ($p['avg_rating'] > 0): ?>
+                                    <span class="text-warning"><i class="fas fa-star"></i> <?= number_format($p['avg_rating'], 1) ?></span>
+                                <?php else: ?>
+                                    <span class="text-muted"><i class="far fa-star"></i> 0.0</span>
+                                <?php endif; ?>
+                                
+                                <?php if ($p['terjual'] > 0): ?>
+                                    <span class="text-muted border-start ms-2 ps-2">
+                                        <i class="fas fa-shopping-bag text-sage-dark me-1" style="opacity: 0.8;"></i> Terjual <?= $p['terjual'] ?>
+                                    </span>
+                                <?php endif; ?>
+                            </div>
                             
                             <div class="d-flex justify-content-between align-items-center mt-auto">
                                 <div class="product-price">
@@ -244,6 +302,7 @@ $produk_list = $stmt->fetchAll();
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         #chatbot-container { position: fixed !important; bottom: 100px !important; right: 30px !important; width: 360px !important; height: 500px !important; background-color: #ffffff !important; border-radius: 16px !important; display: none; flex-direction: column !important; box-shadow: 0 15px 35px rgba(0,0,0,0.2) !important; z-index: 99999 !important; border: 1px solid #e0e0e0 !important; overflow: hidden !important; }
@@ -431,8 +490,25 @@ $produk_list = $stmt->fetchAll();
     <script>
         let maxStock = 0;
         const buyModal = new bootstrap.Modal(document.getElementById('quickBuyModal'));
+        const isLoggedIn = <?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>;
         
         function openBuyModal(id, name, price, stock) {
+            if (!isLoggedIn) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Login Diperlukan',
+                    text: 'Silakan login terlebih dahulu untuk membeli produk.',
+                    confirmButtonColor: '#4a7c6b',
+                    confirmButtonText: 'Login Sekarang',
+                    showCancelButton: true,
+                    cancelButtonText: 'Nanti'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = 'login.php';
+                    }
+                });
+                return;
+            }
             document.getElementById('modalProductId').value = id;
             document.getElementById('modalProductName').innerText = name;
             document.getElementById('modalProductPrice').innerText = 'Rp ' + price.toLocaleString('id-ID');

@@ -59,7 +59,12 @@ $counts = [
 <?php include 'frontend/includes/navbar.php'; ?>
 
 <div class="container my-5 pb-5">
-    <h3 class="fw-bold mb-4 text-dark"><i class="fas fa-history me-2" style="color: #4a7c6b;"></i>Riwayat Pesanan Saya</h3>
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h3 class="fw-bold mb-0 text-dark"><i class="fas fa-history me-2" style="color: #4a7c6b;"></i>Riwayat Pesanan Saya</h3>
+        <a href="index.php" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="fas fa-arrow-left me-1"></i> Lanjut Belanja
+        </a>
+    </div>
 
     <div class="d-flex flex-wrap gap-2 mb-4 pb-2 border-bottom">
         <?php
@@ -172,28 +177,55 @@ $counts = [
                             </div>
                             
                             <?php if($r['status_pesanan'] === 'selesai'): 
-                                $stmtRating = $conn->prepare("SELECT * FROM ratings WHERE id_user = ? AND id_produk = ? LIMIT 1");
-                                $stmtRating->execute([$id_user, $item['id_produk']]);
+                                $stmtRating = $conn->prepare("SELECT * FROM ratings WHERE id_user = ? AND id_produk = ? AND id_transaksi = ? LIMIT 1");
+                                $stmtRating->execute([$id_user, $item['id_produk'], $r['id']]);
                                 $userRating = $stmtRating->fetch();
                             ?>
                             <div class="mt-3 pt-3 border-top">
-                                <form action="backend/submit_rating.php" method="POST" class="row g-2">
-                                    <input type="hidden" name="id_produk" value="<?= $item['id_produk'] ?>">
-                                    <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
-                                    <div class="col-4">
-                                        <select name="rating" class="form-select form-select-sm rounded-pill">
-                                            <?php for($i=5;$i>=1;$i--): ?>
-                                                <option value="<?= $i ?>" <?= (!empty($userRating) && $userRating['rating'] == $i) ? 'selected' : '' ?>><?= $i ?> ★</option>
-                                            <?php endfor; ?>
-                                        </select>
+                                <?php if (empty($userRating)): ?>
+                                    <form action="backend/submit_rating.php" method="POST" class="d-flex flex-column gap-2 bg-white p-3 rounded-4 border shadow-sm">
+                                        <input type="hidden" name="id_produk" value="<?= $item['id_produk'] ?>">
+                                        <input type="hidden" name="id_transaksi" value="<?= $r['id'] ?>">
+                                        <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                                        
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="fw-bold small text-sage-dark"><i class="fas fa-star text-warning me-1"></i> Beri Penilaian</span>
+                                            <div class="star-rating-form">
+                                                <input type="radio" id="star5_<?= $r['id'] ?>_<?= $item['id_produk'] ?>" name="rating" value="5" required />
+                                                <label for="star5_<?= $r['id'] ?>_<?= $item['id_produk'] ?>" title="5 bintang"><i class="fas fa-star"></i></label>
+                                                <input type="radio" id="star4_<?= $r['id'] ?>_<?= $item['id_produk'] ?>" name="rating" value="4" />
+                                                <label for="star4_<?= $r['id'] ?>_<?= $item['id_produk'] ?>" title="4 bintang"><i class="fas fa-star"></i></label>
+                                                <input type="radio" id="star3_<?= $r['id'] ?>_<?= $item['id_produk'] ?>" name="rating" value="3" />
+                                                <label for="star3_<?= $r['id'] ?>_<?= $item['id_produk'] ?>" title="3 bintang"><i class="fas fa-star"></i></label>
+                                                <input type="radio" id="star2_<?= $r['id'] ?>_<?= $item['id_produk'] ?>" name="rating" value="2" />
+                                                <label for="star2_<?= $r['id'] ?>_<?= $item['id_produk'] ?>" title="2 bintang"><i class="fas fa-star"></i></label>
+                                                <input type="radio" id="star1_<?= $r['id'] ?>_<?= $item['id_produk'] ?>" name="rating" value="1" />
+                                                <label for="star1_<?= $r['id'] ?>_<?= $item['id_produk'] ?>" title="1 bintang"><i class="fas fa-star"></i></label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="input-group mt-1 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                                            <textarea name="review" class="form-control border-0 bg-light" rows="2" placeholder="Bagaimana kualitas produk ini? Ceritakan pengalamanmu..." style="resize:none; font-size:0.85rem; box-shadow: none;"></textarea>
+                                            <button type="submit" class="btn btn-sage px-3"><i class="fas fa-paper-plane me-1"></i> Kirim</button>
+                                        </div>
+                                    </form>
+                                <?php else: ?>
+                                    <div class="bg-white p-3 rounded-4 border shadow-sm">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="fw-bold small text-sage-dark"><i class="fas fa-check-circle text-success me-1"></i> Penilaian Kamu</span>
+                                            <div class="text-warning small" style="font-size: 0.9rem;">
+                                                <?php for($i=1; $i<=5; $i++): ?>
+                                                    <i class="<?= $i <= $userRating['rating'] ? 'fas' : 'far' ?> fa-star"></i>
+                                                <?php endfor; ?>
+                                            </div>
+                                        </div>
+                                        <div class="p-2 bg-light rounded-3">
+                                            <p class="mb-0 small text-muted" style="line-height:1.4;">
+                                                <?= nl2br(htmlspecialchars($userRating['review'] ?? 'Tidak ada ulasan teks.')) ?>
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div class="col-6">
-                                        <input type="text" name="review" class="form-control form-control-sm rounded-pill" placeholder="Ulasan..." value="<?= htmlspecialchars($userRating['review'] ?? '') ?>">
-                                    </div>
-                                    <div class="col-2">
-                                        <button type="submit" class="btn btn-sm btn-sage w-100 rounded-circle"><i class="fas fa-paper-plane"></i></button>
-                                    </div>
-                                </form>
+                                <?php endif; ?>
                             </div>
                             <?php endif; ?>
                         </div>
@@ -258,6 +290,20 @@ $counts = [
         title: '<?= $m['type'] === 'success' ? 'Sukses' : 'Gagal' ?>',
         text: '<?= addslashes($m['text']) ?>',
         confirmButtonColor: '<?= $m['type'] === 'success' ? '#4a7c6b' : '#d33' ?>'
+    });
+</script>
+<?php endif; ?>
+<?php if(isset($_SESSION['rating_msg'])): 
+    $rm = $_SESSION['rating_msg']; unset($_SESSION['rating_msg']);
+?>
+<script>
+    Swal.fire({
+        icon: '<?= $rm['type'] === 'success' ? 'success' : 'error' ?>',
+        title: '<?= $rm['type'] === 'success' ? 'Ulasan Terkirim! 🎉' : 'Gagal' ?>',
+        text: '<?= addslashes($rm['text']) ?>',
+        confirmButtonColor: '<?= $rm['type'] === 'success' ? '#4a7c6b' : '#d33' ?>',
+        timer: <?= $rm['type'] === 'success' ? '2500' : '0' ?>,
+        timerProgressBar: <?= $rm['type'] === 'success' ? 'true' : 'false' ?>
     });
 </script>
 <?php endif; ?>

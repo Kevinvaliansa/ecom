@@ -105,9 +105,10 @@ if (!empty($user['foto']) && file_exists("frontend/images/profil/" . $user['foto
 <head>
     <meta charset="UTF-8">
     <title>Profil Saya - XrivaStore</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="frontend/css/style.css">
+    <link rel="stylesheet" href="frontend/css/style.css?v=<?= time() ?>">
     <style>
         .menu-tab { cursor: pointer; transition: 0.2s; }
         .menu-tab:hover { color: var(--xriva-dark) !important; font-weight: bold; }
@@ -236,6 +237,13 @@ if (!empty($user['foto']) && file_exists("frontend/images/profil/" . $user['foto
         </div>
     </div>
 </div>
+
+<footer class="text-white text-center py-4 mt-5" style="background-color: var(--xriva-dark);">
+    <div class="container">
+        <h5 class="fw-bold mb-2"><i class="fas fa-glasses"></i> Xriva Eyewear</h5>
+        <p class="mb-2 small">&copy; <?= date('Y') ?> Xriva Eyewear. All Rights Reserved.</p>
+    </div>
+</footer>
 
 <div class="modal fade" id="modalEditAlamat" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">

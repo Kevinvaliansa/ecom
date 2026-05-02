@@ -24,7 +24,7 @@ if (isset($_SESSION['user_id']) && isset($conn)) {
         </button>
 
         <div class="collapse navbar-collapse" id="navbarMain">
-            <ul class="navbar-nav ms-auto align-items-center gap-3">
+            <ul class="navbar-nav ms-auto align-items-center gap-3" id="navbarNavList" style="position:relative;">
                 <li class="nav-item">
                     <a class="nav-link <?= $current_page == 'index.php' ? 'active fw-bold' : '' ?>" href="index.php">Home</a>
                 </li>
@@ -72,8 +72,9 @@ if (isset($_SESSION['user_id'])) {
                             <?= $inisial_nav ?>
                         </div>
                     <?php endif; ?>
-                    <a class="nav-link dropdown-toggle fw-bold text-white p-0" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                    <a class="nav-link fw-bold text-white p-0 d-flex align-items-center gap-1" href="#" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration:none;">
                         <?= htmlspecialchars($_SESSION['user_nama']) ?>
+                        <i class="fas fa-chevron-down" style="font-size:0.7rem; opacity:0.8; transition: transform 0.25s ease;" id="userChevron"></i>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end mt-3 shadow border-0" style="border-radius: 12px; min-width: 200px;">
                         <?php if (isset($_SESSION['role']) && $_SESSION['role'] == 'admin'): ?>
@@ -117,6 +118,84 @@ if (isset($_SESSION['user_id'])) {
         </div>
     </div>
 </nav>
+
+<script>
+(function() {
+    document.addEventListener('DOMContentLoaded', function () {
+        const navList = document.getElementById('navbarNavList');
+        if (!navList) return;
+
+        // Hanya jalankan di desktop (saat tidak collapsed)
+        const navbarCollapse = document.getElementById('navbarMain');
+
+        // Buat elemen slider
+        const slider = document.createElement('div');
+        slider.id = 'nav-slider';
+        navList.style.position = 'relative';
+        navList.appendChild(slider);
+
+        // Ambil semua nav-link yang bukan dropdown-toggle dan bukan di dalam dropdown
+        const links = navList.querySelectorAll('.nav-item > .nav-link:not(.dropdown-toggle)');
+        const activeLink = navList.querySelector('.nav-item > .nav-link.active');
+
+        function moveSlider(el) {
+            const navRect  = navList.getBoundingClientRect();
+            const linkRect = el.getBoundingClientRect();
+            slider.style.left  = (linkRect.left - navRect.left) + 'px';
+            slider.style.width = linkRect.width + 'px';
+            slider.classList.add('visible');
+        }
+
+        function resetSlider() {
+            if (activeLink) {
+                moveSlider(activeLink);
+            } else {
+                slider.classList.remove('visible');
+            }
+        }
+
+        links.forEach(function(link) {
+            link.addEventListener('mouseenter', function () {
+                // Hanya aktif kalau navbar tidak dalam mode mobile (collapsed)
+                if (navbarCollapse.classList.contains('show') || window.innerWidth < 992) return;
+                moveSlider(link);
+            });
+            link.addEventListener('mouseleave', function () {
+                if (window.innerWidth < 992) return;
+                resetSlider();
+            });
+        });
+
+        // Set posisi awal ke link aktif
+        if (activeLink && window.innerWidth >= 992) {
+            // Sedikit delay agar layout sudah final
+            setTimeout(resetSlider, 50);
+        }
+
+        // Update saat resize
+        window.addEventListener('resize', function () {
+            if (window.innerWidth >= 992) {
+                setTimeout(resetSlider, 50);
+            } else {
+                slider.classList.remove('visible');
+            }
+        });
+        // Chevron rotate saat dropdown user dibuka/tutup
+        const userChevron = document.getElementById('userChevron');
+        if (userChevron) {
+            const dropdownParent = userChevron.closest('.dropdown');
+            if (dropdownParent) {
+                dropdownParent.addEventListener('show.bs.dropdown', function () {
+                    userChevron.style.transform = 'rotate(180deg)';
+                });
+                dropdownParent.addEventListener('hide.bs.dropdown', function () {
+                    userChevron.style.transform = 'rotate(0deg)';
+                });
+            }
+        }
+    });
+})();
+</script>
 
 <!-- ===== GLOBAL TOAST NOTIFICATION ===== -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
