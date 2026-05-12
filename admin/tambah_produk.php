@@ -9,11 +9,14 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
 if (isset($_POST['tambah_produk'])) {
     $nama     = trim($_POST['nama_produk']);
     $kategori = $_POST['kategori'];
-    $harga    = (int)$_POST['harga'];
-    $harga_coret = (int)($_POST['harga_coret'] ?? 0);
+    $harga_normal = (int)$_POST['harga_normal'];
+    $diskon       = (int)($_POST['potongan_diskon'] ?? 0);
+    $harga        = $harga_normal - $diskon;
+    $harga_coret  = ($diskon > 0) ? $harga_normal : 0;
     $stok     = (int)$_POST['stok'];
     $deskripsi= trim($_POST['deskripsi']);
-    $pilihan_varian = trim($_POST['pilihan_varian'] ?? '');
+    $varian_warna = trim($_POST['varian_warna'] ?? '');
+    $varian_lensa = trim($_POST['varian_lensa'] ?? '');
     $gambar   = 'default.png';
 
     $merek = trim($_POST['merek'] ?? '');
@@ -43,8 +46,8 @@ if (isset($_POST['tambah_produk'])) {
         move_uploaded_file($_FILES['gambar4']['tmp_name'], '../frontend/images/produk/' . $gambar4);
     }
 
-    $conn->prepare("INSERT INTO produk (nama_produk, kategori, harga, harga_coret, stok, deskripsi, gambar, pilihan_varian, gambar2, gambar3, gambar4, merek, asal, bahan, bentuk, jenis_lensa, jenis_kelamin, spesifikasi_lain) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
-         ->execute([$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $gambar, $pilihan_varian, $gambar2, $gambar3, $gambar4, $merek, $asal, $bahan, $bentuk, $jenis_lensa, $jenis_kelamin, $spesifikasi_lain]);
+    $conn->prepare("INSERT INTO produk (nama_produk, kategori, harga, harga_coret, stok, deskripsi, gambar, varian_warna, varian_lensa, gambar2, gambar3, gambar4, merek, asal, bahan, bentuk, jenis_lensa, jenis_kelamin, spesifikasi_lain) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+         ->execute([$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $gambar, $varian_warna, $varian_lensa, $gambar2, $gambar3, $gambar4, $merek, $asal, $bahan, $bentuk, $jenis_lensa, $jenis_kelamin, $spesifikasi_lain]);
     header("Location: produk.php?added=1"); exit;
 }
 
@@ -108,30 +111,36 @@ $active_page = 'produk';
                                         <option value="Kacamata Gaya">Kacamata Gaya</option>
                                         <option value="Kacamata Minus">Kacamata Minus</option>
                                         <option value="Kacamata Plus">Kacamata Plus</option>
-                                        <option value="Kacamata Hitam">Kacamata Hitam</option>
                                         <option value="Aksesoris">Aksesoris & Kotak</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Harga Jual <span class="text-danger">*</span></label>
+                                    <label class="form-label">Harga Normal <span class="text-danger">*</span></label>
                                     <div class="input-group">
-                                        <span class="input-group-text bg-light">Rp</span>
-                                        <input type="number" name="harga" class="form-control" placeholder="150000" min="0" required>
+                                        <span class="input-group-text">Rp</span>
+                                        <input type="number" name="harga_normal" class="form-control" placeholder="Contoh: 210000" required>
                                     </div>
+                                    <small class="text-muted">Harga asli sebelum didiskon.</small>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Harga Coret (Opsional)</label>
+                                    <label class="form-label">Potongan Diskon</label>
                                     <div class="input-group">
-                                        <span class="input-group-text bg-light">Rp</span>
-                                        <input type="number" name="harga_coret" class="form-control" placeholder="200000" min="0" value="0">
+                                        <span class="input-group-text">Rp</span>
+                                        <input type="number" name="potongan_diskon" class="form-control" placeholder="Contoh: 51000">
                                     </div>
+                                    <small class="text-muted">Jumlah potongan harga (opsional).</small>
                                 </div>
                             </div>
                             <div class="row g-3 mb-3">
-                                <div class="col-md-8">
-                                    <label class="form-label">Pilihan Varian (Pisahkan dengan koma)</label>
-                                    <input type="text" name="pilihan_varian" class="form-control" placeholder="Cth: Hitam, Putih atau -1.0, -1.5, -2.0">
-                                    <small class="text-muted">Kosongkan jika tidak ada pilihan warna/minus.</small>
+                                <div class="col-md-4">
+                                    <label class="form-label">Varian Warna <small class="text-muted">(pisah koma)</small></label>
+                                    <input type="text" name="varian_warna" class="form-control" placeholder="Cth: Hitam, Putih, Gold">
+                                    <small class="text-muted">Kosongkan jika tidak ada pilihan warna.</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Varian Lensa <small class="text-muted">(pisah koma)</small></label>
+                                    <input type="text" name="varian_lensa" class="form-control" placeholder="Cth: -1, -1.5, -2, +1">
+                                    <small class="text-muted">Kosongkan jika tidak ada pilihan minus/plus.</small>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Stok Awal <span class="text-danger">*</span></label>

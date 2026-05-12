@@ -146,6 +146,22 @@ $counts = [
                             <div class="fw-bold text-dark small"><?= date('d F Y, H:i', strtotime($r['tanggal_transaksi'])) ?></div>
                         </div>
                         <div class="text-end">
+                            <?php
+                            $badgeClass = 'bg-secondary';
+                            if($r['status_pesanan'] == 'pending') $badgeClass = 'bg-warning text-dark';
+                            elseif($r['status_pesanan'] == 'diproses') $badgeClass = 'bg-info text-dark';
+                            elseif($r['status_pesanan'] == 'dikirim') $badgeClass = 'bg-primary';
+                            elseif($r['status_pesanan'] == 'selesai') $badgeClass = 'bg-success';
+                            elseif($r['status_pesanan'] == 'batal') $badgeClass = 'bg-danger';
+
+                            $labelMap = [
+                                'pending' => 'Menunggu Pembayaran',
+                                'diproses' => 'Sedang Diproses',
+                                'dikirim' => 'Sedang Dikirim',
+                                'selesai' => 'Selesai',
+                                'batal' => 'Dibatalkan'
+                            ];
+                            ?>
                             <div class="small text-muted mb-1">Status</div>
                             <span class="badge rounded-pill <?= $badgeClass ?>"><?= $labelMap[$r['status_pesanan']] ?? $r['status_pesanan'] ?></span>
                         </div>

@@ -6,15 +6,27 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
     header("Location: ../login.php"); exit;
 }
 
-// ── PENCARIAN & PAGINASI ────────────────────────────────────
-$search = trim($_GET['search'] ?? '');
-$page   = max(1, (int)($_GET['page'] ?? 1));
-$limit  = 8;
-$offset = ($page - 1) * $limit;
+// ── FILTER, PENCARIAN & PAGINASI ────────────────────────────
+$search   = trim($_GET['search'] ?? '');
+$kategori_filter = trim($_GET['kategori'] ?? '');
+$page     = max(1, (int)($_GET['page'] ?? 1));
+$limit    = 8;
+$offset   = ($page - 1) * $limit;
 
-$params = [];
-$where  = $search ? "WHERE nama_produk LIKE ? OR kategori LIKE ?" : "";
-if ($search) { $params[] = "%$search%"; $params[] = "%$search%"; }
+$all_kategori = ['Kacamata Gaya', 'Kacamata Minus', 'Kacamata Plus', 'Aksesoris'];
+
+$conditions = [];
+$params     = [];
+if ($search) {
+    $conditions[] = "(nama_produk LIKE ? OR kategori LIKE ?)";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
+}
+if ($kategori_filter && in_array($kategori_filter, $all_kategori)) {
+    $conditions[] = "kategori = ?";
+    $params[] = $kategori_filter;
+}
+$where = $conditions ? 'WHERE ' . implode(' AND ', $conditions) : '';
 
 $total_data  = $conn->prepare("SELECT COUNT(*) FROM produk $where");
 $total_data->execute($params);
@@ -25,6 +37,10 @@ $page        = min($page, $total_pages);
 $stmt = $conn->prepare("SELECT * FROM produk $where ORDER BY id DESC LIMIT $limit OFFSET $offset");
 $stmt->execute($params);
 $produk = $stmt->fetchAll();
+
+// Count per kategori untuk badge
+$cnt_stmt = $conn->query("SELECT kategori, COUNT(*) as cnt FROM produk GROUP BY kategori");
+$kat_counts = $cnt_stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
 // Stats
 $total_habis = $conn->query("SELECT COUNT(*) FROM produk WHERE stok=0")->fetchColumn();
@@ -82,24 +98,55 @@ $active_page = 'produk';
 
     <div class="page-content">
 
-        <!-- Search Bar -->
+        <!-- Filter Kategori + Search -->
         <div class="admin-card mb-4">
             <div class="admin-card-body">
+                <!-- Pill Filter Kategori -->
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <?php
+                    $kat_icons = [
+                        'Semua'           => 'fa-th-large',
+                        'Kacamata Gaya'   => 'fa-glasses',
+                        'Kacamata Minus'  => 'fa-eye',
+                        'Kacamata Plus'   => 'fa-eye',
+                        'Aksesoris'       => 'fa-gem',
+                    ];
+                    $tabs = array_merge(['Semua'], $all_kategori);
+                    foreach ($tabs as $tab):
+                        $isActive  = ($tab === 'Semua' && $kategori_filter === '') || $tab === $kategori_filter;
+                        $href      = $tab === 'Semua' ? '?search=' . urlencode($search) : '?kategori=' . urlencode($tab) . '&search=' . urlencode($search);
+                        $cnt       = $tab === 'Semua' ? $total_all : ($kat_counts[$tab] ?? 0);
+                        $icon      = $kat_icons[$tab] ?? 'fa-tag';
+                    ?>
+                    <a href="<?= $href ?>" class="filter-pill <?= $isActive ? 'active' : '' ?>">
+                        <i class="fas <?= $icon ?>"></i>
+                        <?= $tab ?>
+                        <span class="badge rounded-pill ms-1" style="background:rgba(0,0,0,.12);font-size:.68rem;"><?= $cnt ?></span>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- Search -->
                 <form method="GET" class="d-flex gap-2">
+                    <?php if ($kategori_filter): ?>
+                    <input type="hidden" name="kategori" value="<?= htmlspecialchars($kategori_filter) ?>">
+                    <?php endif; ?>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
                         <input type="text" name="search" class="form-control border-start-0"
-                               placeholder="Cari nama produk atau kategori..."
+                               placeholder="Cari nama produk..."
                                value="<?= htmlspecialchars($search) ?>">
                         <?php if ($search): ?>
-                        <a href="produk.php" class="input-group-text bg-light border-start-0 text-muted" title="Hapus pencarian"><i class="fas fa-times"></i></a>
+                        <a href="?kategori=<?= urlencode($kategori_filter) ?>" class="input-group-text bg-light border-start-0 text-muted" title="Hapus pencarian"><i class="fas fa-times"></i></a>
                         <?php endif; ?>
                     </div>
                     <button type="submit" class="btn btn-sage rounded-pill px-4">Cari</button>
                 </form>
-                <?php if ($search): ?>
+                <?php if ($search || $kategori_filter): ?>
                 <p class="mt-2 mb-0 small text-muted">
-                    Ditemukan <strong><?= $total_data ?></strong> produk untuk kata kunci "<strong><?= htmlspecialchars($search) ?></strong>"
+                    Menampilkan <strong><?= $total_data ?></strong> produk
+                    <?= $kategori_filter ? "di kategori <strong>$kategori_filter</strong>" : '' ?>
+                    <?= $search ? " · kata kunci \"<strong>" . htmlspecialchars($search) . "</strong>\"" : '' ?>
                 </p>
                 <?php endif; ?>
             </div>
@@ -181,16 +228,19 @@ $active_page = 'produk';
             <div class="admin-card-body border-top">
                 <nav>
                     <ul class="pagination mb-0 justify-content-center">
-                        <li class="page-item <?= $page<=1 ? 'disabled':'' ?>">
-                            <a class="page-link rounded-pill me-1" href="?page=<?= $page-1 ?>&search=<?= urlencode($search) ?>">← Sebelumnya</a>
+                        <?php
+                        $pbase = '?kategori=' . urlencode($kategori_filter) . '&search=' . urlencode($search) . '&page=';
+                    ?>
+                    <li class="page-item <?= $page<=1 ? 'disabled':'' ?>">
+                            <a class="page-link rounded-pill me-1" href="<?= $pbase . ($page-1) ?>">← Sebelumnya</a>
                         </li>
                         <?php for ($i=1; $i<=$total_pages; $i++): ?>
                         <li class="page-item <?= $page==$i ? 'active':'' ?>">
-                            <a class="page-link rounded-circle mx-1" style="width:36px;text-align:center;" href="?page=<?= $i ?>&search=<?= urlencode($search) ?>"><?= $i ?></a>
+                            <a class="page-link rounded-circle mx-1" style="width:36px;text-align:center;" href="<?= $pbase . $i ?>"><?= $i ?></a>
                         </li>
                         <?php endfor; ?>
                         <li class="page-item <?= $page>=$total_pages ? 'disabled':'' ?>">
-                            <a class="page-link rounded-pill ms-1" href="?page=<?= $page+1 ?>&search=<?= urlencode($search) ?>">Selanjutnya →</a>
+                            <a class="page-link rounded-pill ms-1" href="<?= $pbase . ($page+1) ?>">Selanjutnya →</a>
                         </li>
                     </ul>
                 </nav>

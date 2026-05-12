@@ -182,22 +182,40 @@ $inisial = isset($_SESSION['user_nama']) ? strtoupper(substr($_SESSION['user_nam
                     <?php endif; ?>
                 </div>
 
-                <?php if (!empty($p['pilihan_varian'])): ?>
-                <div class="mb-4">
-                    <h6 class="fw-bold text-muted text-uppercase small mb-3">Pilih Varian</h6>
+                <?php if (!empty($p['varian_warna'])): ?>
+                <div class="mb-3">
+                    <h6 class="fw-bold text-muted text-uppercase small mb-2">Pilih Warna</h6>
                     <div class="d-flex flex-wrap gap-2">
                         <?php 
-                        $varians = explode(',', $p['pilihan_varian']);
-                        foreach ($varians as $v): $v = trim($v);
+                        $warna_list = explode(',', $p['varian_warna']);
+                        foreach ($warna_list as $w): $w = trim($w);
                         ?>
-                            <button type="button" class="btn btn-outline-sage btn-varian rounded-pill px-4" onclick="selectVarian(this, '<?= $v ?>')">
-                                <?= $v ?>
+                            <button type="button" class="btn btn-outline-sage btn-varian-warna rounded-pill px-4" onclick="selectVarianWarna(this, '<?= htmlspecialchars($w) ?>')">
+                                <?= htmlspecialchars($w) ?>
                             </button>
                         <?php endforeach; ?>
                     </div>
-                    <input type="hidden" id="selectedVarian" value="">
+                    <input type="hidden" id="selectedVarianWarna" value="">
                 </div>
                 <?php endif; ?>
+
+                <?php if (!empty($p['varian_lensa'])): ?>
+                <div class="mb-4">
+                    <h6 class="fw-bold text-muted text-uppercase small mb-2">Pilih Ukuran Lensa</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        <?php 
+                        $lensa_list = explode(',', $p['varian_lensa']);
+                        foreach ($lensa_list as $l): $l = trim($l);
+                        ?>
+                            <button type="button" class="btn btn-outline-sage btn-varian-lensa rounded-pill px-4" onclick="selectVarianLensa(this, '<?= htmlspecialchars($l) ?>')">
+                                <?= htmlspecialchars($l) ?>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                    <input type="hidden" id="selectedVarianLensa" value="">
+                </div>
+                <?php endif; ?>
+
 
                 <div class="row g-3 mt-5">
                     <div class="col-md-4">
@@ -248,29 +266,61 @@ $inisial = isset($_SESSION['user_nama']) ? strtoupper(substr($_SESSION['user_nam
                     .btn-outline-sage {
                         color: var(--xriva-primary);
                         border-color: var(--xriva-primary);
+                        transition: all 0.2s ease;
                     }
-                    .btn-outline-sage:hover, .btn-varian.active {
-                        background-color: var(--xriva-primary);
-                        color: white;
+                    .btn-outline-sage:hover, .btn-outline-sage.active {
+                        background-color: var(--xriva-primary) !important;
+                        color: white !important;
+                        border-color: var(--xriva-primary) !important;
+                        box-shadow: 0 4px 12px rgba(74, 124, 107, 0.2);
                     }
                 </style>
 
                 <script>
-                    function selectVarian(btn, val) {
-                        document.querySelectorAll('.btn-varian').forEach(b => b.classList.remove('active'));
+                    function selectVarianWarna(btn, val) {
+                        document.querySelectorAll('.btn-varian-warna').forEach(b => b.classList.remove('active'));
                         btn.classList.add('active');
-                        document.getElementById('selectedVarian').value = val;
-                        document.querySelectorAll('.input-varian-hidden').forEach(inp => inp.value = val);
+                        document.getElementById('selectedVarianWarna').value = val;
+                        updateCombinedVarian();
+                    }
+
+                    function selectVarianLensa(btn, val) {
+                        document.querySelectorAll('.btn-varian-lensa').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        document.getElementById('selectedVarianLensa').value = val;
+                        updateCombinedVarian();
+                    }
+
+                    function updateCombinedVarian() {
+                        const warna = document.getElementById('selectedVarianWarna') ? document.getElementById('selectedVarianWarna').value : '';
+                        const lensa = document.getElementById('selectedVarianLensa') ? document.getElementById('selectedVarianLensa').value : '';
+                        let combined = '';
+                        if (warna && lensa) combined = warna + ' / ' + lensa;
+                        else if (warna) combined = warna;
+                        else if (lensa) combined = lensa;
+                        document.querySelectorAll('.input-varian-hidden').forEach(inp => inp.value = combined);
                     }
 
                     function validateVarian() {
-                        const hasVarian = <?= !empty($p['pilihan_varian']) ? 'true' : 'false' ?>;
-                        const selected = document.getElementById('selectedVarian') ? document.getElementById('selectedVarian').value : '';
-                        if (hasVarian && !selected) {
+                        const hasWarna = <?= !empty($p['varian_warna']) ? 'true' : 'false' ?>;
+                        const hasLensa = <?= !empty($p['varian_lensa']) ? 'true' : 'false' ?>;
+                        const selectedWarna = document.getElementById('selectedVarianWarna') ? document.getElementById('selectedVarianWarna').value : '';
+                        const selectedLensa = document.getElementById('selectedVarianLensa') ? document.getElementById('selectedVarianLensa').value : '';
+
+                        if (hasWarna && !selectedWarna) {
                             Swal.fire({
                                 icon: 'warning',
-                                title: 'Pilih Varian',
-                                text: 'Silakan pilih varian kacamata terlebih dahulu!',
+                                title: 'Pilih Warna',
+                                text: 'Silakan pilih varian warna terlebih dahulu!',
+                                confirmButtonColor: '#4a7c6b'
+                            });
+                            return false;
+                        }
+                        if (hasLensa && !selectedLensa) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Pilih Ukuran Lensa',
+                                text: 'Silakan pilih ukuran lensa terlebih dahulu!',
                                 confirmButtonColor: '#4a7c6b'
                             });
                             return false;

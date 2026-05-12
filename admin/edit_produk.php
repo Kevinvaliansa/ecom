@@ -12,11 +12,14 @@ if (isset($_POST['edit_produk'])) {
     $id_edit   = (int)$_POST['id'];
     $nama      = trim($_POST['nama_produk']);
     $kategori  = $_POST['kategori'];
-    $harga     = (int)$_POST['harga'];
-    $harga_coret = (int)($_POST['harga_coret'] ?? 0);
+    $harga_normal = (int)$_POST['harga_normal'];
+    $diskon       = (int)($_POST['potongan_diskon'] ?? 0);
+    $harga        = $harga_normal - $diskon;
+    $harga_coret  = ($diskon > 0) ? $harga_normal : 0;
     $stok      = (int)$_POST['stok'];
     $deskripsi = trim($_POST['deskripsi']);
-    $pilihan_varian = trim($_POST['pilihan_varian'] ?? '');
+    $varian_warna = trim($_POST['varian_warna'] ?? '');
+    $varian_lensa = trim($_POST['varian_lensa'] ?? '');
 
     $merek = trim($_POST['merek'] ?? '');
     $asal = trim($_POST['asal'] ?? '');
@@ -26,8 +29,8 @@ if (isset($_POST['edit_produk'])) {
     $jenis_kelamin = trim($_POST['jenis_kelamin'] ?? '-');
     $spesifikasi_lain = trim($_POST['spesifikasi_lain'] ?? '');
 
-    $sql = "UPDATE produk SET nama_produk=?, kategori=?, harga=?, harga_coret=?, stok=?, deskripsi=?, pilihan_varian=?, merek=?, asal=?, bahan=?, bentuk=?, jenis_lensa=?, jenis_kelamin=?, spesifikasi_lain=?";
-    $params = [$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $pilihan_varian, $merek, $asal, $bahan, $bentuk, $jenis_lensa, $jenis_kelamin, $spesifikasi_lain];
+    $sql = "UPDATE produk SET nama_produk=?, kategori=?, harga=?, harga_coret=?, stok=?, deskripsi=?, varian_warna=?, varian_lensa=?, merek=?, asal=?, bahan=?, bentuk=?, jenis_lensa=?, jenis_kelamin=?, spesifikasi_lain=?";
+    $params = [$nama, $kategori, $harga, $harga_coret, $stok, $deskripsi, $varian_warna, $varian_lensa, $merek, $asal, $bahan, $bentuk, $jenis_lensa, $jenis_kelamin, $spesifikasi_lain];
 
     if (!empty($_FILES['gambar']['name'])) {
         $gambar_baru = time() . '_' . basename($_FILES['gambar']['name']);
@@ -125,34 +128,48 @@ $active_page = 'produk';
                                     <label class="form-label">Kategori <span class="text-danger">*</span></label>
                                     <select name="kategori" class="form-select" required>
                                         <?php
-                                        $kategori_opts = ['Kacamata Gaya','Kacamata Minus','Kacamata Plus','Kacamata Hitam','Aksesoris'];
+                                        $kategori_opts = ['Kacamata Gaya','Kacamata Minus','Kacamata Plus','Aksesoris'];
                                         foreach ($kategori_opts as $k): ?>
                                         <option value="<?= $k ?>" <?= $kat_saat_ini == $k ? 'selected':'' ?>><?= $k ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Harga Jual <span class="text-danger">*</span></label>
+                                    <label class="form-label">Harga Normal <span class="text-danger">*</span></label>
                                     <div class="input-group">
-                                        <span class="input-group-text bg-light">Rp</span>
-                                        <input type="number" name="harga" class="form-control" value="<?= $p['harga'] ?>" min="0" required>
+                                        <span class="input-group-text">Rp</span>
+                                        <?php 
+                                            // Harga Normal adalah harga_coret jika ada, jika tidak ada (0) maka ambil dari harga
+                                            $val_normal = ($p['harga_coret'] > 0) ? $p['harga_coret'] : $p['harga'];
+                                            $val_diskon = ($p['harga_coret'] > 0) ? ($p['harga_coret'] - $p['harga']) : 0;
+                                        ?>
+                                        <input type="number" name="harga_normal" class="form-control" value="<?= (int)$val_normal ?>" required>
                                     </div>
+                                    <small class="text-muted">Harga asli sebelum didiskon.</small>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Harga Coret</label>
+                                    <label class="form-label">Potongan Diskon</label>
                                     <div class="input-group">
-                                        <span class="input-group-text bg-light">Rp</span>
-                                        <input type="number" name="harga_coret" class="form-control" value="<?= htmlspecialchars($p['harga_coret'] ?? 0) ?>" min="0">
+                                        <span class="input-group-text">Rp</span>
+                                        <input type="number" name="potongan_diskon" class="form-control" value="<?= (int)$val_diskon ?>">
                                     </div>
+                                    <small class="text-muted">Jumlah potongan harga (opsional).</small>
                                 </div>
                             </div>
                             <div class="row g-3 mb-3">
-                                <div class="col-md-8">
-                                    <label class="form-label">Pilihan Varian (Pisahkan dengan koma)</label>
-                                    <input type="text" name="pilihan_varian" class="form-control" 
-                                           placeholder="Cth: Hitam, Putih atau -1.0, -1.5, -2.0"
-                                           value="<?= htmlspecialchars($p['pilihan_varian'] ?? '') ?>">
-                                    <small class="text-muted">Kosongkan jika tidak ada pilihan warna/minus.</small>
+                                <div class="col-md-4">
+                                    <label class="form-label">Varian Warna <small class="text-muted">(pisah koma)</small></label>
+                                    <input type="text" name="varian_warna" class="form-control"
+                                           placeholder="Cth: Hitam, Putih, Gold"
+                                           value="<?= htmlspecialchars($p['varian_warna'] ?? '') ?>">
+                                    <small class="text-muted">Kosongkan jika tidak ada pilihan warna.</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Varian Lensa <small class="text-muted">(pisah koma)</small></label>
+                                    <input type="text" name="varian_lensa" class="form-control"
+                                           placeholder="Cth: -1, -1.5, -2, +1"
+                                           value="<?= htmlspecialchars($p['varian_lensa'] ?? '') ?>">
+                                    <small class="text-muted">Kosongkan jika tidak ada pilihan minus/plus.</small>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Stok <span class="text-danger">*</span></label>
